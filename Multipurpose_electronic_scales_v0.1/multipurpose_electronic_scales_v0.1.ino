@@ -60,8 +60,8 @@
 #define  EEPROM_IDENT           0xE76B      // to identify if EEPROM was written by this program
 
 //Default values that can be changed by the user and store in the EEPROM 
-float    scaleFacter            = DEFAULT_SCALE_FACTOR / 100;
-float    gravityAcceleration    = GRAVITY_ACCELERATION / 100;
+float    scaleFacter            = (float)DEFAULT_SCALE_FACTOR / 100;
+float    gravityAcceleration    = (float)GRAVITY_ACCELERATION / 100;
 char     units                  = DEFAULT_UNIT;
 bool     beepEnable             = BEEP_ENABLE;
 
@@ -127,11 +127,12 @@ void getEEPROM() {
 
 // writes user settings to EEPROM using updade function to minimize write cycles
 void updateEEPROM() {
-  
-  EEPROM.update( 2, scaleFacter >> 8);
-  EEPROM.update( 3, scaleFacter & 0xFF);
-  EEPROM.update( 4, gravityAcceleration >> 8);
-  EEPROM.update( 5, gravityAcceleration & 0xFF);
+  int SCALE_FACTOR_INSTORE = scaleFacter * 100;
+  int GRAVITY_ACC_INSTORE = gravityAcceleration * 100;
+  EEPROM.update( 2, SCALE_FACTOR_INSTORE >> 8);
+  EEPROM.update( 3, SCALE_FACTOR_INSTORE & 0xFF);
+  EEPROM.update( 4, GRAVITY_ACC_INSTORE >> 8);
+  EEPROM.update( 5, GRAVITY_ACC_INSTORE & 0xFF);
   EEPROM.update( 6, units);
   EEPROM.update( 7, beepEnable);
 }
