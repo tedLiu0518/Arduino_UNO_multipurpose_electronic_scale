@@ -6,8 +6,8 @@
 // - Calibrating and store the scale factor into the EEPROM
 // - Automatically enter weighing mode after start-up
 // - Setup menu by long pressing the Enter button
-// - Buzzer
 // - Advanced function to control other pins (main purpose of this project)
+// - Buzzer
 // 
 // Power supply should be in the range of 7-12V according to the
 // Arduino_UNO_Rev3 tech specs.
@@ -22,10 +22,9 @@
 // Contributions & Special thanks:
 // The program structure refers to the following project:
 // - Stefan Wagner, https://github.com/wagiminator/ATmega-Soldering-Station
-// Contributers:
 //
 // 2022 by Ted Liu
-// Project Files (Github): 
+// Project Files (Github): https://github.com/tedLiu0518/Arduino_UNO_multipurpose_electronic_scale
 // 
 // License: 
 // - Creative Commons Attribution-ShareAlike 3.0 License (CC BY-SA 3.0)
@@ -37,15 +36,15 @@
 #include "EEPROM.h"                         // https://github.com/PaulStoffregen/EEPROM
 
 // Firmware version
-#define  VERSION                "v0.1"
+#define  VERSION              "v0.1"
 
 //Pins
-#define  HX711_DT_PIN           "2"         // HX711 module Data IO Connection
-#define  HX711_SCK_PIN          "3"         // HX711 module Serial Clock Input
-#define  BTN_ENTER_PIN          "6"         // Enter button Input
-#define  BTN_UP_PIN             "7"         // Up button Input
-#define  BTN_DOWN_PIN           "8"         // Down button Input
-#define  BTN_ESC_PIN            "9"         // ESC button Input
+#define  HX711_DT_PIN            "2"        // HX711 module Data IO Connection
+#define  HX711_SCK_PIN           "3"        // HX711 module Serial Clock Input
+#define  BTN_ENTER_PIN           "6"        // Enter button Input
+#define  BTN_UP_PIN              "7"        // Up button Input
+#define  BTN_DOWN_PIN            "8"        // Down button Input
+#define  BTN_ESC_PIN             "9"        // ESC button Input
 #define  BUZZER_PIN             "10"        // Buzzer
 
 // Default values
@@ -54,27 +53,30 @@
 #define  BEEP_ENABLE            true        // enable/disable buzzer
 
 // Default measurement unit
-#define  DEFAULT_UNIT           0003        // 0001 for kgf, 0002 for gf, 0003 for N, 0004 for kg, 0005 for g
+#define  DEFAULT_UNIT              3        // 1 for kgf, 2 for gf, 3 for N, 4 for kg, 5 for g
 
 // EEPROM identifier
-#define  EEPROM_IDENT           0xE76B      // to identify if EEPROM was written by this program
+#define  EEPROM_IDENT         0xE76B        // to identify if EEPROM was written by this program
 
 //Default values that can be changed by the user and store in the EEPROM 
-float    scaleFacter            = (float)DEFAULT_SCALE_FACTOR / 100;
-float    gravityAcceleration    = (float)GRAVITY_ACCELERATION / 100;
-char     units                  = DEFAULT_UNIT;
-bool     beepEnable             = BEEP_ENABLE;
+float    scaleFacter               =  (float)DEFAULT_SCALE_FACTOR / 100.00;
+float    gravityAcceleration       =  (float)GRAVITY_ACCELERATION / 100.00;
+uint8_t  units                     =  DEFAULT_UNIT;
+bool     beepEnable                =  BEEP_ENABLE;
+
+// Variables for temperature control
+uint8_t  SetUnit;
+float    SetScaleFactor, SetGravityAcc;
+bool     SetBeepEnable;
 
 // Menu items
-const char *MainScreenItems[]   = { "Measurement", "Setting", "Information", "Advance" };
-const char *SureItems[]         = { "Are you sure ?", "No", "Yes" };
-const char *SettingItems[]      = { "Calibration", "Gravity setting", "Set scale factor" };
-const char *InformationItems[]  = { "Scale factor", "Gravity acceleration", "Firmware version" };
-const char *StoreItems[]        = { "Store Settings ?", "No", "Yes" };
-const char *UnitsItems[]        = { "kgf", "gf", "N", "kg", "g" };
-const char *AdvanceItems[]      = { "Comming Soon" };
-
-// Timing variables
+const char *MainScreenItems[]      =  { "Measurement", "Setting", "Information", "Advance" };
+const char *SureItems[]            =  { "Are you sure ?", "No", "Yes" };
+const char *SettingItems[]         =  { "Calibration", "Gravity setting", "Set scale factor" };
+const char *InformationItems[]     =  { "Scale factor", "Gravity acceleration", "Firmware version" };
+const char *StoreItems[]           =  { "Store Settings ?", "No", "Yes" };
+const char *UnitsItems[]           =  { "kgf", "gf", "N", "kg", "g" };
+const char *AdvanceItems[]         =  { "Comming Soon" };
 
 // Create hx711 object
 HX711 hx711;
@@ -103,7 +105,11 @@ void setup() {
 
   // get default values from EEPROM
   getEEPROM();
-  
+
+  // read and set current value
+  SetScaleFactor = scaleFacter;
+  RawTemp = 
+  ChipTemp = 
 }
 
 void loop() {
@@ -117,7 +123,7 @@ void getEEPROM() {
     scaleFacter           = (EEPROM.read(2) << 8) | EEPROM.read(3);
     gravityAcceleration   = (EEPROM.read(4) << 8) | EEPROM.read(5);
     units                 = EEPROM.read(6);
-    beepEnable            = EEPROM.read(6);
+    beepEnable            = EEPROM.read(7);
   }
   else {
     EEPROM.update(0, EEPROM_IDENT >> 8); EEPROM.update(1, EEPROM_IDENT & 0xFF);
@@ -127,12 +133,69 @@ void getEEPROM() {
 
 // writes user settings to EEPROM using updade function to minimize write cycles
 void updateEEPROM() {
-  int SCALE_FACTOR_INSTORE = scaleFacter * 100;
-  int GRAVITY_ACC_INSTORE = gravityAcceleration * 100;
+  uint16_t SCALE_FACTOR_INSTORE = scaleFacter * 100;
+  uint16_t GRAVITY_ACC_INSTORE = gravityAcceleration * 100;
   EEPROM.update( 2, SCALE_FACTOR_INSTORE >> 8);
   EEPROM.update( 3, SCALE_FACTOR_INSTORE & 0xFF);
   EEPROM.update( 4, GRAVITY_ACC_INSTORE >> 8);
   EEPROM.update( 5, GRAVITY_ACC_INSTORE & 0xFF);
   EEPROM.update( 6, units);
   EEPROM.update( 7, beepEnable);
+}
+
+
+void updateMenu(){
+  switch(menu){
+    case 0:
+      menu = 1;
+      break;
+    case 1:
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print(">Get_loads");
+      lcd.setCursor(0, 1);
+      lcd.print(" Calibrate");
+      break;
+    case 2:
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print(" Get_loads");
+      lcd.setCursor(0, 1);
+      lcd.print(">Calibrate");
+      break;
+    case 3:
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print(">Show_factor");
+      lcd.setCursor(0, 1);
+      lcd.print(" MenuItem4");
+      break;
+    case 4:
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print(" Show_factor");
+      lcd.setCursor(0, 1);
+      lcd.print(">MenuItem4");
+      break;
+    case 5:
+      menu = 4;
+      break;
+  }
+}
+
+void executeAction(){
+  switch(menu){
+    case 1:
+      task1();
+      break;
+    case 2:
+      task2();
+      break;
+    case 3:
+      task3();
+      break;
+    case 4:
+      task4();
+      break;  
+  }  
 }
