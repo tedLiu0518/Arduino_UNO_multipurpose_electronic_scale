@@ -112,10 +112,6 @@ void setup() {
   ChipTemp = 
 }
 
-void loop() {
-  
-}
-
 // reads user settings from EEPROM; if EEPROM values are invalid, write defaults
 void getEEPROM() {
   uint16_t identifier = (EEPROM.read(0) << 8) | EEPROM.read(1);
@@ -144,7 +140,37 @@ void updateEEPROM() {
 }
 
 
-void updateMenu(){
+void loop() {
+  if(!digitalRead(downButton)){
+    menu++;
+    updateMenu(); 
+    delay(100); 
+    while(!digitalRead(downButton));
+    delay(100);
+  }
+  if(!digitalRead(upButton)){
+    menu--;
+    updateMenu(); 
+    delay(100);
+    while(!digitalRead(upButton));
+    delay(100);
+  }
+  if(!digitalRead(modeButton)){
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Selected");
+    delay(100);
+    while(!digitalRead(modeButton))
+    delay(100);
+    executeAction();
+    updateMenu();
+  }
+}
+
+
+void updateMenu(char items){
+  int total_items =  items.length()
+
   switch(menu){
     case 0:
       menu = 1;
