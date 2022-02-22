@@ -108,8 +108,9 @@ void setup() {
 
   // read and set current value
   SetScaleFactor = scaleFacter;
-  RawTemp = 
-  ChipTemp = 
+  SetGravityAcc = gravityAcceleration;
+  SetUnit = units;
+  SetBeepEnable = beepEnable;
 }
 
 // reads user settings from EEPROM; if EEPROM values are invalid, write defaults
@@ -140,88 +141,90 @@ void updateEEPROM() {
 }
 
 
-void loop() {
-  if(!digitalRead(downButton)){
-    menu++;
-    updateMenu(); 
-    delay(100); 
-    while(!digitalRead(downButton));
-    delay(100);
+// void loop() {
+  
+// }
+
+// void MainScreen(){
+
+
+// }
+
+
+
+// void updateMenu(char Items[], menu){
+//     lcd.clear();
+//     lcd.setCursor(0, 0);
+//     lcd.print(Items[menu]);
+//     lcd.setCursor(0, 1);
+//     if(menu != Items.length()){
+//         lcd.print(Items[menu+1])
+//     }
+//     else{
+//         lcd.print("none")
+//     }
+
+// }
+
+
+// int drawMenu(char Items[]){
+//     int menu = 1;
+//     while(!digitalRead(enterButton)||!digitalRead(exeButton)){
+//     if(!digitalRead(downButton)){
+//         while(!digitalRead(downButton));
+//         if(menu != Items.length()){
+//     menu++;
+//     }
+//     updateMenu( Items[],  menu); 
+//     delay(100); 
+//   }
+//   if(!digitalRead(upButton)){
+//       while(!digitalRead(upButton));
+//       if(menu != 0){
+//     menu--;
+//       }
+//     updateMenu(Items[],  menu); 
+//     delay(100);
+//   }
+//     }
+//     if(!digitalRead(enterButton)){
+//         while(!digitalRead(enterButton));
+//         return menu
+//     }
+//     if(!digitalRead(escButton)){
+//         while(!digitalRead(escButton));
+//         return 0
+//     }
+//   }
+    
+// }
+
+// Check the ESC & ENTER button; enter setup menu accordingly
+void ButtonCheck() {
+  // check rotary encoder switch
+  uint8_t c = digitalRead(BTN_ENTER_PIN);
+  uint8_t d = digitalRead(BTN_ESC_PIN);
+  if ( !c && c0 ) {
+    beep();
+    buttonmillis = millis();
+    while( (!digitalRead(BUTTON_PIN)) && ((millis() - buttonmillis) < 500) );
+    if ((millis() - buttonmillis) >= 500) SetupScreen();
+    else {
+      inBoostMode = !inBoostMode;
+      if (inBoostMode) boostmillis = millis();
+      handleMoved = true;
+    }
   }
-  if(!digitalRead(upButton)){
-    menu--;
-    updateMenu(); 
-    delay(100);
-    while(!digitalRead(upButton));
-    delay(100);
-  }
-  if(!digitalRead(modeButton)){
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Selected");
-    delay(100);
-    while(!digitalRead(modeButton))
-    delay(100);
-    executeAction();
-    updateMenu();
-  }
+  c0 = c;
+}
+
+void SetupScreen(){
+    
 }
 
 
-void updateMenu(char items){
-  int total_items =  items.length()
 
-  switch(menu){
-    case 0:
-      menu = 1;
-      break;
-    case 1:
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print(">Get_loads");
-      lcd.setCursor(0, 1);
-      lcd.print(" Calibrate");
-      break;
-    case 2:
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print(" Get_loads");
-      lcd.setCursor(0, 1);
-      lcd.print(">Calibrate");
-      break;
-    case 3:
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print(">Show_factor");
-      lcd.setCursor(0, 1);
-      lcd.print(" MenuItem4");
-      break;
-    case 4:
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print(" Show_factor");
-      lcd.setCursor(0, 1);
-      lcd.print(">MenuItem4");
-      break;
-    case 5:
-      menu = 4;
-      break;
-  }
-}
 
-void executeAction(){
-  switch(menu){
-    case 1:
-      task1();
-      break;
-    case 2:
-      task2();
-      break;
-    case 3:
-      task3();
-      break;
-    case 4:
-      task4();
-      break;  
-  }  
-}
+
+
+
