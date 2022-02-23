@@ -58,6 +58,9 @@
 // EEPROM identifier
 #define  EEPROM_IDENT         0xE76B        // to identify if EEPROM was written by this program
 
+// Timing variables
+uint32_t  buttonmillis;
+
 //Default values that can be changed by the user and store in the EEPROM 
 float    scaleFacter               =  (float)DEFAULT_SCALE_FACTOR / 100.00;
 float    gravityAcceleration       =  (float)GRAVITY_ACCELERATION / 100.00;
@@ -140,10 +143,9 @@ void updateEEPROM() {
   EEPROM.update( 7, beepEnable);
 }
 
-
-// void loop() {
-  
-// }
+ void loop() {
+  ButtonCheck();
+}
 
 // void MainScreen(){
 
@@ -199,32 +201,65 @@ void updateEEPROM() {
     
 // }
 
-// Check the ESC & ENTER button; enter setup menu accordingly
+// Check the ENTER button; enter setup menu accordingly
 void ButtonCheck() {
-  // check rotary encoder switch
-  uint8_t c = digitalRead(BTN_ENTER_PIN);
-  uint8_t d = digitalRead(BTN_ESC_PIN);
-  if ( !c && c0 ) {
-    beep();
-    buttonmillis = millis();
-    while( (!digitalRead(BUTTON_PIN)) && ((millis() - buttonmillis) < 500) );
-    if ((millis() - buttonmillis) >= 500) SetupScreen();
-    else {
-      inBoostMode = !inBoostMode;
-      if (inBoostMode) boostmillis = millis();
-      handleMoved = true;
+  buttonmillis = millis();
+  while( (!digitalRead(BTN_ENTER_PIN)) && ((millis() - buttonmillis) < 500) );
+  if ((millis() - buttonmillis) >= 500) SetupScreen();
+}
+
+void SetupScreen() {
+  uint8_t selection = 0;
+  bool repeat = true;
+  
+  while (repeat) {
+    selection = MenuScreen(SetupItems, sizeof(SetupItems), selection);
+    switch (selection) {
+      case 0:   TipScreen(); repeat = false; break;
+      case 1:   TempScreen(); break;
+      case 2:   TimerScreen(); break;
+      case 3:   PIDenable = MenuScreen(ControlTypeItems, sizeof(ControlTypeItems), PIDenable); break;
+      case 4:   MainScrType = MenuScreen(MainScreenItems, sizeof(MainScreenItems), MainScrType); break;
+      case 5:   beepEnable = MenuScreen(BuzzerItems, sizeof(BuzzerItems), beepEnable); break;
+      case 6:   InfoScreen(); break;
+      default:  repeat = false; break;
     }
-  }
-  c0 = c;
+  }  
+  updateEEPROM();
+  SetTemp = SaveSetTemp;
+  setRotary(TEMP_MIN, TEMP_MAX, TEMP_STEP, SetTemp);
 }
 
-void SetupScreen(){
-    
+// menu screen
+uint8_t MenuScreen(const char *Items[], uint8_t numberOfItems, uint8_t selected) {
+  bool isTipScreen = (Items[0] == "Tip:");
+  uint8_t lastselected = selected;
+  int8_t  arrow = 0;
+  if (selected) arrow = 1;
+  numberOfItems >>= 1;
+  setRotary(0, numberOfItems - 2, 1, selected);
+  bool    lastbutton = (!digitalRead(BUTTON_PIN));
+
+  do {
+    selected = getRotary();
+    arrow = constrain(arrow + selected - lastselected, 0, 2);
+    lastselected = selected;
+    u8g.firstPage();
+      do {
+        u8g.setFont(u8g_font_9x15);
+        u8g.setFontPosTop();
+        u8g.drawStr( 0, 0,  Items[0]);
+        if (isTipScreen) u8g.drawStr( 54, 0,  TipName[CurrentTip]);
+        u8g.drawStr( 0, 16 * (arrow + 1), ">");
+        for (uint8_t i=0; i<3; i++) {
+          uint8_t drawnumber = selected + i + 1 - arrow;
+          if (drawnumber < numberOfItems)
+            u8g.drawStr( 12, 16 * (i + 1), Items[selected + i + 1 - arrow]);
+        }
+      } while(u8g.nextPage());
+    if (lastbutton && digitalRead(BUTTON_PIN)) {delay(10); lastbutton = false;}
+  } while (digitalRead(BUTTON_PIN) || lastbutton);
+
+  beep();
+  return selected;
 }
-
-
-
-
-
-
-
