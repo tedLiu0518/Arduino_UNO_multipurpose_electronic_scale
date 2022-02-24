@@ -59,7 +59,7 @@
 #define  EEPROM_IDENT         0xE76B        // to identify if EEPROM was written by this program
 
 // Timing variables
-uint32_t  buttonmillis;
+uint32_t  buttonmillis, currentmillis;
 
 //Default values that can be changed by the user and store in the EEPROM 
 float    scaleFacter               =  (float)DEFAULT_SCALE_FACTOR / 100.00;
@@ -202,16 +202,21 @@ void updateEEPROM() {
 // }
 
 // Check the ENTER button; enter setup menu accordingly
-void ButtonCheck() {
+void ButtonLongPress() {
   buttonmillis = millis();
   while( (!digitalRead(BTN_ENTER_PIN)) && ((millis() - buttonmillis) < 500) );
   if ((millis() - buttonmillis) >= 500) SetupScreen();
 }
 
+void ButtonShortPress(int BUTTON_PIN){
+    buttonmillis = millis();
+    while(!digitalRead(BUTTON_PIN));
+
+}
+
 void SetupScreen() {
   uint8_t selection = 0;
   bool repeat = true;
-  
   while (repeat) {
     selection = MenuScreen(SetupItems, sizeof(SetupItems), selection);
     switch (selection) {
@@ -232,34 +237,37 @@ void SetupScreen() {
 
 // menu screen
 uint8_t MenuScreen(const char *Items[], uint8_t numberOfItems, uint8_t selected) {
-  bool isTipScreen = (Items[0] == "Tip:");
+  selected = 0
+  while(digitalRead(BTN_ENTER_PIN)&&digitalRead(BTN_ESC_PIN)){
+      checkbuttonup&BTN_DOWN_PIN
+          if BTN_DOWN_PIN
+          selected++
+          if BTN_UP_PIN
+          selected--
+  }
   uint8_t lastselected = selected;
   int8_t  arrow = 0;
-  if (selected) arrow = 1;
-  numberOfItems >>= 1;
-  setRotary(0, numberOfItems - 2, 1, selected);
-  bool    lastbutton = (!digitalRead(BUTTON_PIN));
-
-  do {
-    selected = getRotary();
-    arrow = constrain(arrow + selected - lastselected, 0, 2);
-    lastselected = selected;
-    u8g.firstPage();
-      do {
-        u8g.setFont(u8g_font_9x15);
-        u8g.setFontPosTop();
-        u8g.drawStr( 0, 0,  Items[0]);
-        if (isTipScreen) u8g.drawStr( 54, 0,  TipName[CurrentTip]);
-        u8g.drawStr( 0, 16 * (arrow + 1), ">");
-        for (uint8_t i=0; i<3; i++) {
-          uint8_t drawnumber = selected + i + 1 - arrow;
-          if (drawnumber < numberOfItems)
-            u8g.drawStr( 12, 16 * (i + 1), Items[selected + i + 1 - arrow]);
-        }
-      } while(u8g.nextPage());
-    if (lastbutton && digitalRead(BUTTON_PIN)) {delay(10); lastbutton = false;}
-  } while (digitalRead(BUTTON_PIN) || lastbutton);
-
-  beep();
+  
   return selected;
+}
+
+
+
+int selection(const char *Items[], uint8_t numberOfItems,){
+    selected = 0;
+    while(btncheck(enter||esc)){
+      menuscreen(const char *Items[], uint8_t numberOfItems, uint8_t selected)
+      if(buttonCheck(up)&&selected!= 0) selected--
+      if(buttonCheck(down)&&selected!=numberOfItems) selected++
+    }
+    return selection
+}
+
+bool buttonCheck(int buttonPin, uint32_t timeSetted){
+    currentmillis = millis();
+    while(!digitalRead(buttonPin)){
+        buttonmillis = millis();
+        if(buttonmillis >= timeSetted&&digitalRead(buttonPin)) return true;
+    }
+    return false;
 }
