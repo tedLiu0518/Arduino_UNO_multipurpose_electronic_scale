@@ -36,16 +36,16 @@
 #include "EEPROM.h"                         // https://github.com/PaulStoffregen/EEPROM
 
 // Firmware version
-#define  VERSION              "v0.1"
+#define  VERSION              "v0.2"
 
 //Pins
-#define  HX711_DT_PIN            "2"        // HX711 module Data IO Connection
-#define  HX711_SCK_PIN           "3"        // HX711 module Serial Clock Input
-#define  BTN_ENTER_PIN           "6"        // Enter button Input
-#define  BTN_UP_PIN              "7"        // Up button Input
-#define  BTN_DOWN_PIN            "8"        // Down button Input
-#define  BTN_ESC_PIN             "9"        // ESC button Input
-#define  BUZZER_PIN             "10"        // Buzzer
+#define  HX711_DT_PIN            2        // HX711 module Data IO Connection
+#define  HX711_SCK_PIN           3        // HX711 module Serial Clock Input
+#define  BTN_ENTER_PIN           6        // Enter button Input
+#define  BTN_UP_PIN              7        // Up button Input
+#define  BTN_DOWN_PIN            8        // Down button Input
+#define  BTN_ESC_PIN             9        // ESC button Input
+#define  BUZZER_PIN             10        // Buzzer
 
 // Default values
 #define  DEFAULT_SCALE_FACTOR   2080        // Default scale factor of DYLT-101 "S" Type load cell (20.80)
@@ -58,10 +58,17 @@
 // EEPROM identifier
 #define  EEPROM_IDENT         0xE76B        // to identify if EEPROM was written by this program
 
-// Timing variables
-uint32_t  buttonmillis, currentmillis;
+// Define long press and short press time set(ms)
+#define  LONG_PRESS               500
+#define  SHORT_PRESS               10
 
-//Default values that can be changed by the user and store in the EEPROM 
+// Timing variables
+uint32_t  buttonMillis, currentMillis;
+
+// Selection variables
+uint8_t selected;
+
+// Default values that can be changed by the user and store in the EEPROM 
 float    scaleFacter               =  (float)DEFAULT_SCALE_FACTOR / 100.00;
 float    gravityAcceleration       =  (float)GRAVITY_ACCELERATION / 100.00;
 uint8_t  units                     =  DEFAULT_UNIT;
@@ -144,7 +151,7 @@ void updateEEPROM() {
 }
 
  void loop() {
-  ButtonCheck();
+
 }
 
 // void MainScreen(){
@@ -201,44 +208,80 @@ void updateEEPROM() {
     
 // }
 
-
-
-void mainmenu(){
-    int s = selection()
-    switch(s):
-    case
-    case
-    case
-    case
-
-}
-
-void updatescreen(const char *Items[], uint8_t numberOfItems, uint8_t selected){
-    lcd
-    lcd
-    lcd
-
-}
-
-
-int selection(const char *Items[], uint8_t numberOfItems,){
-     int selected = 0;
-    while(btnexit){
-      updatescreen( *Items[], numberOfItems, selected)
-      if(buttonCheck(up)&&selected!= 0) selected--
-      if(buttonCheck(down)&&selected!=numberOfItems) selected++
-        if btncheck(enter){
-            return selected
-        };
+void Measurement(){
+       while(1){
+    lcd.print("measure");
     }
-    return numberOfItems + 1;
 }
 
-bool buttonCheck(int buttonPin, uint32_t timeSetted){
-    currentmillis = millis();
-    while(!digitalRead(buttonPin)){
-        buttonmillis = millis();
-        if(buttonmillis >= timeSetted&&digitalRead(buttonPin)) return true;
+void Setting(){
+    while(1){
+    lcd.print("setting");
+    }
+}
+
+void Information(){
+       while(1){
+    lcd.print("information");
+    }
+}
+
+void Advance(){
+       while(1){
+    lcd.print("advance");
+    }
+}
+
+void exit(){
+       while(1){
+    lcd.print("exit");
+    }
+}
+
+void mainMenu() {
+    int selectedFunc = selection(MainScreenItems, sizeof(MainScreenItems));
+    switch (selectedFunc) {
+        case 0:   Measurement();   break;
+        case 1:   Setting(); break;
+        case 2:   Information();   break;
+        case 3:   Advance();   break;
+        case 4:   exit();      break;
+        default:  break;
+    }
+}
+
+void updateScreen(const char *Items[], uint8_t numberOfItems, uint8_t selected) {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(">" + *Items[selected]);
+    if(selected <= (numberOfItems-2)) {
+        lcd.setCursor(0, 1);
+        lcd.print(*Items[selected+1]);
+    }
+}
+
+int selection(const char *Items[], uint8_t numberOfItems) {
+    selected = 0;
+    while(!buttonCheck(BTN_ESC_PIN, SHORT_PRESS)) {
+        updateScreen(Items, numberOfItems, selected);
+        if(buttonCheck(BTN_UP_PIN, SHORT_PRESS) && (selected != 0)) {
+            selected --;
+        }
+        if(buttonCheck(BTN_DOWN_PIN, SHORT_PRESS) && (selected != (numberOfItems - 2))) {
+            selected ++;
+        }
+        if(buttonCheck(BTN_ENTER_PIN, SHORT_PRESS)) {
+            return selected;
+        }
+    }
+    return numberOfItems;
+}
+
+bool buttonCheck(int buttonPin, uint32_t timeSetted) {
+    currentMillis = millis();
+    while(!digitalRead(buttonPin)) {
+        buttonMillis = millis();
+        if((buttonMillis >= timeSetted) && digitalRead(buttonPin)) return true;
     }
     return false;
 }
