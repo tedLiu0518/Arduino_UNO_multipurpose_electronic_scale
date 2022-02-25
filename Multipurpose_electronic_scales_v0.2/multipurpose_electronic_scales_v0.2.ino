@@ -7,7 +7,6 @@
 // - Automatically enter weighing mode after start-up
 // - Setup menu by long pressing the Enter button
 // - Advanced function to control other pins (main purpose of this project)
-// - Buzzer
 // 
 // Power supply should be in the range of 7-12V according to the
 // Arduino_UNO_Rev3 tech specs.
@@ -22,6 +21,8 @@
 // Contributions & Special thanks:
 // The program structure refers to the following project:
 // - Stefan Wagner, https://github.com/wagiminator/ATmega-Soldering-Station
+// Contributors:
+// - 
 //
 // 2022 by Ted Liu
 // Project Files (Github): https://github.com/tedLiu0518/Arduino_UNO_multipurpose_electronic_scale
@@ -38,19 +39,17 @@
 // Firmware version
 #define  VERSION              "v0.2"
 
-//Pins
-#define  HX711_DT_PIN            2        // HX711 module Data IO Connection
-#define  HX711_SCK_PIN           3        // HX711 module Serial Clock Input
-#define  BTN_ENTER_PIN           6        // Enter button Input
-#define  BTN_UP_PIN              7        // Up button Input
-#define  BTN_DOWN_PIN            8        // Down button Input
-#define  BTN_ESC_PIN             9        // ESC button Input
-#define  BUZZER_PIN             10        // Buzzer
+// Pins
+#define  HX711_DT_PIN              2        // HX711 module Data IO Connection
+#define  HX711_SCK_PIN             3        // HX711 module Serial Clock Input
+#define  BTN_ENTER_PIN             4        // Enter button Input
+#define  BTN_UP_PIN                5        // Up button Input
+#define  BTN_DOWN_PIN              6        // Down button Input
+#define  BTN_ESC_PIN               7        // ESC button Input
 
-// Default values
+// Default values                   
 #define  DEFAULT_SCALE_FACTOR   2080        // Default scale factor of DYLT-101 "S" Type load cell (20.80)
 #define  GRAVITY_ACCELERATION    981        // Default gravitational acceleration (9.81)
-#define  BEEP_ENABLE            true        // enable/disable buzzer
 
 // Default measurement unit
 #define  DEFAULT_UNIT              3        // 1 for kgf, 2 for gf, 3 for N, 4 for kg, 5 for g
@@ -58,9 +57,9 @@
 // EEPROM identifier
 #define  EEPROM_IDENT         0xE76B        // to identify if EEPROM was written by this program
 
-// Define long press and short press time set(ms)
-#define  LONG_PRESS               500
-#define  SHORT_PRESS               10
+// Define long press and short press time set (ms)
+#define  LONG_PRESS              500
+#define  SHORT_PRESS              10
 
 // Timing variables
 uint32_t  buttonMillis, currentMillis;
@@ -72,12 +71,10 @@ uint8_t selected;
 float    scaleFacter               =  (float)DEFAULT_SCALE_FACTOR / 100.00;
 float    gravityAcceleration       =  (float)GRAVITY_ACCELERATION / 100.00;
 uint8_t  units                     =  DEFAULT_UNIT;
-bool     beepEnable                =  BEEP_ENABLE;
 
-// Variables for temperature control
-uint8_t  SetUnit;
-float    SetScaleFactor, SetGravityAcc;
-bool     SetBeepEnable;
+// Variables for running
+// uint8_t  SetUnit;
+// float    SetScaleFactor, SetGravityAcc;
 
 // Menu items
 const char *MainScreenItems[]      =  { "Measurement", "Setting", "Information", "Advance" };
@@ -95,42 +92,37 @@ HX711 hx711;
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 void setup() {
-  // set the buttons and buzzer pin modes
-  pinMode(BTN_ENTER_PIN, INPUT_PULLUP);
-  pinMode(BTN_UP_PIN, INPUT_PULLUP);
-  pinMode(BTN_DOWN_PIN, INPUT_PULLUP);
-  pinMode(BTN_ESC_PIN, INPUT_PULLUP);
-  pinMode(BUZZER_PIN, OUTPUT);
+    // set the buttons pin modes
+    pinMode(BTN_ENTER_PIN, INPUT_PULLUP);
+    pinMode(BTN_UP_PIN, INPUT_PULLUP);
+    pinMode(BTN_DOWN_PIN, INPUT_PULLUP);
+    pinMode(BTN_ESC_PIN, INPUT_PULLUP);
   
-  // initialize the HX711 
-  hx711.begin(HX711_DT_PIN, HX711_SCK_PIN);
+    // initialize the HX711 
+    hx711.begin(HX711_DT_PIN, HX711_SCK_PIN);
+    hx711.power_down();	
 
-  // initialize the lcd
-  lcd.init();     
-  lcd.backlight();  
-  lcd.print("LCD is running..");
+    // initialize the lcd
+    lcd.init();     
+    lcd.backlight();  
+    lcd.print("LCD is running..");
 
-  // must be LOW when buzzer not in use
-  digitalWrite(BUZZER_PIN, LOW); 
+    // get default values from EEPROM
+    getEEPROM();
 
-  // get default values from EEPROM
-  getEEPROM();
-
-  // read and set current value
-  SetScaleFactor = scaleFacter;
-  SetGravityAcc = gravityAcceleration;
-  SetUnit = units;
-  SetBeepEnable = beepEnable;
+    // // read and set current value
+    // SetScaleFactor = scaleFacter;
+    // SetGravityAcc = gravityAcceleration;
+    // SetUnit = units;
 }
 
 // reads user settings from EEPROM; if EEPROM values are invalid, write defaults
 void getEEPROM() {
-  uint16_t identifier = (EEPROM.read(0) << 8) | EEPROM.read(1);
-  if (identifier == EEPROM_IDENT) {
+    uint16_t identifier = (EEPROM.read(0) << 8) | EEPROM.read(1);
+    if (identifier == EEPROM_IDENT) {
     scaleFacter           = (EEPROM.read(2) << 8) | EEPROM.read(3);
     gravityAcceleration   = (EEPROM.read(4) << 8) | EEPROM.read(5);
-    units                 = EEPROM.read(6);
-    beepEnable            = EEPROM.read(7);
+    units                 =  EEPROM.read(6);
   }
   else {
     EEPROM.update(0, EEPROM_IDENT >> 8); EEPROM.update(1, EEPROM_IDENT & 0xFF);
@@ -147,72 +139,24 @@ void updateEEPROM() {
   EEPROM.update( 4, GRAVITY_ACC_INSTORE >> 8);
   EEPROM.update( 5, GRAVITY_ACC_INSTORE & 0xFF);
   EEPROM.update( 6, units);
-  EEPROM.update( 7, beepEnable);
 }
 
- void loop() {
+
+void loop() {
 
 }
-
-// void MainScreen(){
-
-
-// }
-
-
-
-// void updateMenu(char Items[], menu){
-//     lcd.clear();
-//     lcd.setCursor(0, 0);
-//     lcd.print(Items[menu]);
-//     lcd.setCursor(0, 1);
-//     if(menu != Items.length()){
-//         lcd.print(Items[menu+1])
-//     }
-//     else{
-//         lcd.print("none")
-//     }
-
-// }
-
-
-// int drawMenu(char Items[]){
-//     int menu = 1;
-//     while(!digitalRead(enterButton)||!digitalRead(exeButton)){
-//     if(!digitalRead(downButton)){
-//         while(!digitalRead(downButton));
-//         if(menu != Items.length()){
-//     menu++;
-//     }
-//     updateMenu( Items[],  menu); 
-//     delay(100); 
-//   }
-//   if(!digitalRead(upButton)){
-//       while(!digitalRead(upButton));
-//       if(menu != 0){
-//     menu--;
-//       }
-//     updateMenu(Items[],  menu); 
-//     delay(100);
-//   }
-//     }
-//     if(!digitalRead(enterButton)){
-//         while(!digitalRead(enterButton));
-//         return menu
-//     }
-//     if(!digitalRead(escButton)){
-//         while(!digitalRead(escButton));
-//         return 0
-//     }
-//   }
-    
-// }
 
 void Measurement(){
-       while(1){
-    lcd.print("measure");
-    }
+    hx711.power_up();
+    hx711.set_scale(scaleFacter); 
+    hx711.tare();			        
+    lcd.print("taring..");
+    while(!buttonCheck(BTN_ESC_PIN, LONG_PRESS)){
+          lcd.print(hx711.get_units(10), 0); 
+            delay(1000);      
+    }  
 }
+
 
 void Setting(){
     while(1){
