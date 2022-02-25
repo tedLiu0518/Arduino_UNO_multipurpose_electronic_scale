@@ -201,66 +201,37 @@ void updateEEPROM() {
     
 // }
 
-// Check the ENTER button; enter setup menu accordingly
-void ButtonLongPress() {
-  buttonmillis = millis();
-  while( (!digitalRead(BTN_ENTER_PIN)) && ((millis() - buttonmillis) < 500) );
-  if ((millis() - buttonmillis) >= 500) SetupScreen();
+
+
+void mainmenu(){
+    int s = selection()
+    switch(s):
+    case
+    case
+    case
+    case
+
 }
 
-void ButtonShortPress(int BUTTON_PIN){
-    buttonmillis = millis();
-    while(!digitalRead(BUTTON_PIN));
+void updatescreen(const char *Items[], uint8_t numberOfItems, uint8_t selected){
+    lcd
+    lcd
+    lcd
 
 }
-
-void SetupScreen() {
-  uint8_t selection = 0;
-  bool repeat = true;
-  while (repeat) {
-    selection = MenuScreen(SetupItems, sizeof(SetupItems), selection);
-    switch (selection) {
-      case 0:   TipScreen(); repeat = false; break;
-      case 1:   TempScreen(); break;
-      case 2:   TimerScreen(); break;
-      case 3:   PIDenable = MenuScreen(ControlTypeItems, sizeof(ControlTypeItems), PIDenable); break;
-      case 4:   MainScrType = MenuScreen(MainScreenItems, sizeof(MainScreenItems), MainScrType); break;
-      case 5:   beepEnable = MenuScreen(BuzzerItems, sizeof(BuzzerItems), beepEnable); break;
-      case 6:   InfoScreen(); break;
-      default:  repeat = false; break;
-    }
-  }  
-  updateEEPROM();
-  SetTemp = SaveSetTemp;
-  setRotary(TEMP_MIN, TEMP_MAX, TEMP_STEP, SetTemp);
-}
-
-// menu screen
-uint8_t MenuScreen(const char *Items[], uint8_t numberOfItems, uint8_t selected) {
-  selected = 0
-  while(digitalRead(BTN_ENTER_PIN)&&digitalRead(BTN_ESC_PIN)){
-      checkbuttonup&BTN_DOWN_PIN
-          if BTN_DOWN_PIN
-          selected++
-          if BTN_UP_PIN
-          selected--
-  }
-  uint8_t lastselected = selected;
-  int8_t  arrow = 0;
-  
-  return selected;
-}
-
 
 
 int selection(const char *Items[], uint8_t numberOfItems,){
-    selected = 0;
-    while(btncheck(enter||esc)){
-      menuscreen(const char *Items[], uint8_t numberOfItems, uint8_t selected)
+     int selected = 0;
+    while(btnexit){
+      updatescreen( *Items[], numberOfItems, selected)
       if(buttonCheck(up)&&selected!= 0) selected--
       if(buttonCheck(down)&&selected!=numberOfItems) selected++
+        if btncheck(enter){
+            return selected
+        };
     }
-    return selection
+    return numberOfItems + 1;
 }
 
 bool buttonCheck(int buttonPin, uint32_t timeSetted){
