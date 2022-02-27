@@ -61,6 +61,9 @@
 #define  LONG_PRESS              500
 #define  SHORT_PRESS              10
 
+// Define the refresh time set of the lcd (ms)
+#define REFRESH_TIME             100
+
 // Timing variables
 uint32_t  buttonMillis, currentMillis;
 
@@ -77,13 +80,13 @@ uint8_t  units                     =  DEFAULT_UNIT;
 // float    SetScaleFactor, SetGravityAcc;
 
 // Menu items
-const char *MainScreenItems[]      =  { "Measurement", "Setting", "Information", "Advance" };
-const char *SureItems[]            =  { "Are you sure ?", "No", "Yes" };
-const char *SettingItems[]         =  { "Calibration", "Gravity setting", "Set scale factor" };
-const char *InformationItems[]     =  { "Scale factor", "Gravity acceleration", "Firmware version" };
-const char *StoreItems[]           =  { "Store Settings ?", "No", "Yes" };
-const char *UnitsItems[]           =  { "kgf", "gf", "N", "kg", "g" };
-const char *AdvanceItems[]         =  { "Comming Soon" };
+const String MainScreenItems[]      =  { "Measurement", "Setting", "Information", "Advance" };
+const char* SureItems[]            =  { "Are you sure ?", "No", "Yes" };
+const char* SettingItems[]         =  { "Calibration", "Gravity setting", "Set scale factor" };
+const char* InformationItems[]     =  { "Scale factor", "Gravity acceleration", "Firmware version" };
+const char* StoreItems[]           =  { "Store Settings ?", "No", "Yes" };
+const char* UnitsItems[]           =  { "kgf", "gf", "N", "kg", "g" };
+const char* AdvanceItems[]         =  { "Comming Soon" };
 
 // Create hx711 object
 HX711 hx711;
@@ -106,6 +109,7 @@ void setup() {
     lcd.init();     
     lcd.backlight();  
     lcd.print("LCD is running..");
+    delay(REFRESH_TIME);
 
     // get default values from EEPROM
     getEEPROM();
@@ -114,6 +118,7 @@ void setup() {
     // SetScaleFactor = scaleFacter;
     // SetGravityAcc = gravityAcceleration;
     // SetUnit = units;
+    Measurement();
 }
 
 // reads user settings from EEPROM; if EEPROM values are invalid, write defaults
@@ -143,24 +148,53 @@ void updateEEPROM() {
 
 
 void loop() {
-
+    mainMenu();
 }
 
 void Measurement(){
     hx711.power_up();
     hx711.set_scale(scaleFacter); 
-    hx711.tare();			        
+    hx711.tare();
+    lcd.clear();			        
     lcd.print("taring..");
+    delay(REFRESH_TIME);
+    lcd.clear();
+    lcd.print("measuring..");
+    delay(REFRESH_TIME);
     while(!buttonCheck(BTN_ESC_PIN, LONG_PRESS)){
-          lcd.print(hx711.get_units(10), 0); 
-            delay(1000);      
+        currentMillis = millis();
+        float value = hx711.get_units(10)
+        if(currentMillis >= REFRESH_TIME){
+            lcd.clear();
+            lcd.print(value);
+        }     
     }  
+    hx711.power_down();
 }
 
+void Calibration(){
+    hx711.power_up();
+    const int sample_weight = 150;  
+    hx711.set_scale();  //set current scale to 0 
+    hx711.tare();       //set current load to 0
+    lcd.print("Nothing on it.");
+    delay(100);
+    lcd.print("Please put sapmple object on it..."); 
+    float current_weight= hx711.get_units(10);  
+    float scale_factor=(current_weight/sample_weight);
+    lcd.print("Scale number:  ");
+    lcd.print(scale_factor,0);  
+    delay(1000);
+}
 
 void Setting(){
-    while(1){
-    lcd.print("setting");
+    int selectedFunc = selection(MainScreenItems, sizeof(MainScreenItems));
+    switch (selectedFunc) {
+        case 0:   Calibration();    break;
+        // case 1:   Gravity_setting(); break;
+        // case 2:   Set_scale_factor();  break;
+        // case 3:   exit();      break;
+        default:  break;
     }
 }
 
@@ -183,28 +217,28 @@ void exit(){
 }
 
 void mainMenu() {
-    int selectedFunc = selection(MainScreenItems, sizeof(MainScreenItems));
+    int selectedFunc = selection(MainScreenItems, 4);
     switch (selectedFunc) {
-        case 0:   Measurement();   break;
-        case 1:   Setting(); break;
-        case 2:   Information();   break;
-        case 3:   Advance();   break;
-        case 4:   exit();      break;
-        default:  break;
+        case 0:   Measurement();    break;
+        case 1:   Setting();        break;
+        case 2:   Information();    break;
+        case 3:   Advance();        break;
+        default:                    break;
     }
 }
 
-void updateScreen(const char *Items[], uint8_t numberOfItems, uint8_t selected) {
+void updateScreen(String Items[], uint8_t numberOfItems, uint8_t selected) {
     lcd.clear();
     lcd.setCursor(0, 0);
-    lcd.print(">" + *Items[selected]);
+    lcd.print(">" + Items[selected]);
     if(selected <= (numberOfItems-2)) {
         lcd.setCursor(0, 1);
-        lcd.print(*Items[selected+1]);
+        lcd.print(Items[selected+1]);
     }
+    delay(100);
 }
 
-int selection(const char *Items[], uint8_t numberOfItems) {
+int selection(String Items[], uint8_t numberOfItems) {
     selected = 0;
     while(!buttonCheck(BTN_ESC_PIN, SHORT_PRESS)) {
         updateScreen(Items, numberOfItems, selected);
