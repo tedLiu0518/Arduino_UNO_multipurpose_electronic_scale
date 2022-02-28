@@ -58,14 +58,14 @@
 #define  EEPROM_IDENT         0xE76B        // to identify if EEPROM was written by this program
 
 // Define long press and short press time set (ms)
-#define  LONG_PRESS              500
-#define  SHORT_PRESS              10
+#define  LONG_PRESS              200
+#define  SHORT_PRESS               1
 
 // Define the refresh time set of the lcd (ms)
 #define REFRESH_TIME             100
 
 // Timing variables
-uint32_t  buttonMillis, currentMillis;
+uint32_t  buttonMillis, currentMillis, lcdMillis;
 
 // Selection variables
 uint8_t selected;
@@ -81,8 +81,8 @@ uint8_t  units                     =  DEFAULT_UNIT;
 
 // Menu items
 const String MainScreenItems[]      =  { "Measurement", "Setting", "Information", "Advance" };
-const char* SureItems[]            =  { "Are you sure ?", "No", "Yes" };
-const char* SettingItems[]         =  { "Calibration", "Gravity setting", "Set scale factor" };
+const String SureItems[]            =  { "Are you sure ?", "No", "Yes" };
+const String SettingItems[]         =  { "Calibration", "Gravity setting", "Set scale factor" };
 const char* InformationItems[]     =  { "Scale factor", "Gravity acceleration", "Firmware version" };
 const char* StoreItems[]           =  { "Store Settings ?", "No", "Yes" };
 const char* UnitsItems[]           =  { "kgf", "gf", "N", "kg", "g" };
@@ -161,12 +161,14 @@ void Measurement(){
     lcd.clear();
     lcd.print("measuring..");
     delay(REFRESH_TIME);
+    lcdMillis = millis();
     while(!buttonCheck(BTN_ESC_PIN, LONG_PRESS)){
         currentMillis = millis();
-        float value = hx711.get_units(10)
-        if(currentMillis >= REFRESH_TIME){
+        float value = hx711.get_units(10);
+        if(currentMillis - lcdMillis >= REFRESH_TIME){
             lcd.clear();
             lcd.print(value);
+            lcdMillis = millis();
         }     
     }  
     hx711.power_down();
@@ -179,7 +181,7 @@ void Calibration(){
     hx711.tare();       //set current load to 0
     lcd.print("Nothing on it.");
     delay(100);
-    lcd.print("Please put sapmple object on it..."); 
+    lcd.print("Put sapmple object on it..."); 
     float current_weight= hx711.get_units(10);  
     float scale_factor=(current_weight/sample_weight);
     lcd.print("Scale number:  ");
@@ -188,12 +190,11 @@ void Calibration(){
 }
 
 void Setting(){
-    int selectedFunc = selection(MainScreenItems, sizeof(MainScreenItems));
+    int selectedFunc = selection(SettingItems, 3);
     switch (selectedFunc) {
         case 0:   Calibration();    break;
         // case 1:   Gravity_setting(); break;
         // case 2:   Set_scale_factor();  break;
-        // case 3:   exit();      break;
         default:  break;
     }
 }
@@ -235,17 +236,21 @@ void updateScreen(String Items[], uint8_t numberOfItems, uint8_t selected) {
         lcd.setCursor(0, 1);
         lcd.print(Items[selected+1]);
     }
-    delay(100);
 }
 
 int selection(String Items[], uint8_t numberOfItems) {
     selected = 0;
+    lcdMillis = millis();
     while(!buttonCheck(BTN_ESC_PIN, SHORT_PRESS)) {
-        updateScreen(Items, numberOfItems, selected);
+        currentMillis = millis();
+        if(currentMillis - lcdMillis >= REFRESH_TIME){
+            updateScreen(Items, numberOfItems, selected);
+            lcdMillis = millis();
+        }
         if(buttonCheck(BTN_UP_PIN, SHORT_PRESS) && (selected != 0)) {
             selected --;
         }
-        if(buttonCheck(BTN_DOWN_PIN, SHORT_PRESS) && (selected != (numberOfItems - 2))) {
+        if(buttonCheck(BTN_DOWN_PIN, SHORT_PRESS) && (selected != (numberOfItems - 1))) {
             selected ++;
         }
         if(buttonCheck(BTN_ENTER_PIN, SHORT_PRESS)) {
@@ -259,7 +264,7 @@ bool buttonCheck(int buttonPin, uint32_t timeSetted) {
     currentMillis = millis();
     while(!digitalRead(buttonPin)) {
         buttonMillis = millis();
-        if((buttonMillis >= timeSetted) && digitalRead(buttonPin)) return true;
+        if((buttonMillis - currentMillis >= timeSetted) && digitalRead(buttonPin)) return true;
     }
     return false;
 }
