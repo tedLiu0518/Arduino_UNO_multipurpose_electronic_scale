@@ -46,7 +46,7 @@ void mainMenu() {
 int selection(String Items[], uint8_t numberOfItems) {
     selected = 0;
     lcdMillis = millis();
-    while(!buttonCheck(BTN_ESC_PIN, 1)) {
+    while(1) {
         currentMillis = millis();
         if(currentMillis - lcdMillis >= 100){
             updateScreen(Items, numberOfItems, selected);
@@ -61,8 +61,10 @@ int selection(String Items[], uint8_t numberOfItems) {
         if(buttonCheck(BTN_ENTER_PIN, 1)) {
             return selected;
         }
+        if(buttonCheck(BTN_ESC_PIN, 1)) {
+            return numberOfItems;
+        }
     }
-    return numberOfItems;
 }
 
 bool buttonCheck(int buttonPin, uint32_t timeSetted) {
