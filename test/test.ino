@@ -52,10 +52,10 @@ int selection(String Items[], uint8_t numberOfItems) {
             updateScreen(Items, numberOfItems, selected);
             lcdMillis = millis();
         }
-        if(buttonCheck(BTN_UP_PIN, 1) && (selected != 0)) {
+        if(buttonCheck(BTN_UP_PIN, 10) && (selected != 0)) {
             selected --;
         }
-        if(buttonCheck(BTN_DOWN_PIN, 1) && (selected != (numberOfItems - 1))) {
+        if(buttonCheck(BTN_DOWN_PIN, 10) && (selected != (numberOfItems - 1))) {
             selected ++;
         }
         if(buttonCheck(BTN_ENTER_PIN, 1)) {
@@ -71,7 +71,10 @@ bool buttonCheck(int buttonPin, uint32_t timeSetted) {
     currentMillis = millis();
     while(!digitalRead(buttonPin)) {
         buttonMillis = millis();
-        if((buttonMillis - currentMillis >= timeSetted) && digitalRead(buttonPin)) return true;
+        if(buttonMillis - currentMillis >= timeSetted){
+            while(!digitalRead(buttonPin));
+            return true;
+        } 
     }
     return false;
 }
@@ -89,5 +92,3 @@ void updateScreen(String Items[], uint8_t numberOfItems, uint8_t selected) {
 void loop(){
     mainMenu();
 }
-
-

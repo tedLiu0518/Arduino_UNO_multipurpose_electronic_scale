@@ -35,6 +35,7 @@
 #include "HX711.h"                          // https://github.com/bogde/HX711
 #include "LiquidCrystal_I2C.h"              // https://github.com/johnrickman/LiquidCrystal_I2C
 #include "EEPROM.h"                         // https://github.com/PaulStoffregen/EEPROM
+#include "math.h"
 
 // Firmware version
 #define  VERSION              "v0.2"
@@ -174,15 +175,48 @@ void Measurement(){
     hx711.power_down();
 }
 
+void updateNum(int selectedNum[], int numberSize){
+    lcd.clear();
+    for(int i =0;i<=numberSize;i++){
+        lcd.setCursor(1, 16 - i);
+        lcd.print(selectedNum[i]) 
+    }
+}
+
+void numberInput(int numberSize){
+    int selectedNum[numberSize] = 0;
+    for(int i = 0; i <= numberSize-1 ; i++){
+        selectedNum[i] = 0;
+        lcdMillis = millis();
+        while(!buttonCheck(BTN_ENTER_PIN, SHORT_PRESS){
+            currentMillis = millis();
+            if(currentMillis - lcdMillis >= REFRESH_TIME){
+                updateNum(selectedNum, 4);
+                lcdMillis = millis();
+            }
+            if(buttonCheck(BTN_UP_PIN, SHORT_PRESS) && (selectedNum[i] != 0)) {
+                selectedNum[i] --;
+            }
+            if(buttonCheck(BTN_DOWN_PIN, SHORT_PRESS) && (selectedNum[i] != 9)) {
+                selectedNum[i] ++;
+            }
+        }
+    }
+    uint16_t numberReturn = 0;
+    for(int i = 0; i<= numberSize-1 ; i++){
+        numberReturn = numberReturn + (selectedNum[i]*pow(10,i))
+    }
+}
+
 void Calibration(){
     hx711.power_up();
-    const int sample_weight = 150;  
     hx711.set_scale();  //set current scale to 0 
     hx711.tare();       //set current load to 0
     lcd.print("Nothing on it.");
-    delay(100);
+    delay(REFRESH_TIME);
     lcd.print("Put sapmple object on it..."); 
-    float current_weight= hx711.get_units(10);  
+    delay(REFRESH_TIME);
+    float current_weight= hx711.get_units(10); 
     float scale_factor=(current_weight/sample_weight);
     lcd.print("Scale number:  ");
     lcd.print(scale_factor,0);  
