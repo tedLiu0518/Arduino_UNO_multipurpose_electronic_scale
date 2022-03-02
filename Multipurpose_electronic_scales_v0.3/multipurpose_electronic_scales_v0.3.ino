@@ -38,7 +38,7 @@
 #include "math.h"
 
 // Firmware version
-#define  VERSION              "v0.2"
+#define  VERSION              "v0.3"
 
 // Pins
 #define  HX711_DT_PIN              2        // HX711 module Data IO Connection
@@ -175,49 +175,53 @@ void Measurement(){
     hx711.power_down();
 }
 
-void updateNum(int selectedNum[], int numberSize){
-    lcd.clear();
-    for(int i =0;i<=numberSize;i++){
-        lcd.setCursor(1, 16 - i);
-        lcd.print(selectedNum[i]) 
-    }
-}
-
-void numberInput(int numberSize){
-    int selectedNum[numberSize] = 0;
+uint16_t numberInput(int numberSize){
+    int selectedNum[numberSize] = {0};
     for(int i = 0; i <= numberSize-1 ; i++){
-        selectedNum[i] = 0;
         lcdMillis = millis();
-        while(!buttonCheck(BTN_ENTER_PIN, SHORT_PRESS){
+        while(!buttonCheck(BTN_ENTER_PIN, SHORT_PRESS)){
             currentMillis = millis();
             if(currentMillis - lcdMillis >= REFRESH_TIME){
-                updateNum(selectedNum, 4);
+                CalibrationScreen(selectedNum, 4);
                 lcdMillis = millis();
             }
-            if(buttonCheck(BTN_UP_PIN, SHORT_PRESS) && (selectedNum[i] != 0)) {
-                selectedNum[i] --;
+            if(buttonCheck(BTN_DOWN_PIN, SHORT_PRESS) && (selectedNum[i] != 0)) {
+                selectedNum[i]--;
             }
-            if(buttonCheck(BTN_DOWN_PIN, SHORT_PRESS) && (selectedNum[i] != 9)) {
-                selectedNum[i] ++;
+            if(buttonCheck(BTN_UP_PIN, SHORT_PRESS) && (selectedNum[i] != 9)) {
+                selectedNum[i]++;
             }
         }
     }
     uint16_t numberReturn = 0;
     for(int i = 0; i<= numberSize-1 ; i++){
-        numberReturn = numberReturn + (selectedNum[i]*pow(10,i))
+        numberReturn = numberReturn + (selectedNum[i]*pow(10,i));
     }
+    return numberReturn;
+}
+
+void CalibrationScreen(int selectedNum[], int numberSize){
+    lcd.clear();
+    for(int i = 0; i < numberSize; i++){
+        lcd.setCursor((15-i),1);
+        lcd.print(selectedNum[i]);
+    } 
 }
 
 void Calibration(){
     hx711.power_up();
     hx711.set_scale();  //set current scale to 0 
+    lcd.clear();
+    lcd.print("Nothing on it...");
+    delay(REFRESH_TIME);
     hx711.tare();       //set current load to 0
-    lcd.print("Nothing on it.");
+    lcd.clear();
+    lcd.print("Put sapmple object..."); 
     delay(REFRESH_TIME);
-    lcd.print("Put sapmple object on it..."); 
-    delay(REFRESH_TIME);
-    float current_weight= hx711.get_units(10); 
-    float scale_factor=(current_weight/sample_weight);
+    uint16_t sample_weight =  numberInput(4);
+    float current_weight = hx711.get_units(10); 
+    float scale_factor = (current_weight/sample_weight);
+    lcd.clear();
     lcd.print("Scale number:  ");
     lcd.print(scale_factor,0);  
     delay(1000);
@@ -245,12 +249,6 @@ void Advance(){
     }
 }
 
-void exit(){
-       while(1){
-    lcd.print("exit");
-    }
-}
-
 void mainMenu() {
     int selectedFunc = selection(MainScreenItems, 4);
     switch (selectedFunc) {
@@ -275,7 +273,7 @@ void updateScreen(String Items[], uint8_t numberOfItems, uint8_t selected) {
 int selection(String Items[], uint8_t numberOfItems) {
     selected = 0;
     lcdMillis = millis();
-    while(!buttonCheck(BTN_ESC_PIN, SHORT_PRESS)) {
+    while(1) {
         currentMillis = millis();
         if(currentMillis - lcdMillis >= REFRESH_TIME){
             updateScreen(Items, numberOfItems, selected);
@@ -290,15 +288,23 @@ int selection(String Items[], uint8_t numberOfItems) {
         if(buttonCheck(BTN_ENTER_PIN, SHORT_PRESS)) {
             return selected;
         }
+        if(buttonCheck(BTN_ESC_PIN, SHORT_PRESS)){
+            return numberOfItems;
+        }
     }
-    return numberOfItems;
 }
 
-bool buttonCheck(int buttonPin, uint32_t timeSetted) {
+// Function to check whether a button is pressed and released, when released check the pressing time,
+// if the pressing time bigger than timeSetted return true.
+// When a button is pressed the task will locked (hope to fix)
+bool buttonCheck(uint8_t buttonPin, uint32_t timeSetted) {
     currentMillis = millis();
     while(!digitalRead(buttonPin)) {
         buttonMillis = millis();
-        if((buttonMillis - currentMillis >= timeSetted) && digitalRead(buttonPin)) return true;
+        if(buttonMillis - currentMillis >= timeSetted){
+            while(!digitalRead(buttonPin));
+            return true;
+        } 
     }
     return false;
 }
