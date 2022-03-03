@@ -3,19 +3,19 @@
 // Arduino_UNO_Rev3 ATmega328P controlled multipurpose electronic scale.
 //
 // This version of the code implements (not yet):
-// - Calibrating and store the scale factor into the EEPROM
+// - Calibrating and storing the scale factor into the EEPROM
 // - Automatically enter weighing mode after start-up
-// - Setup menu by long pressing the Enter button
-// - Advanced function to control other pins (main purpose of this project)
+// - Setup menu by long-pressing the Enter button
+// - Advanced function to control other pins (the main purpose of this project)
 // 
 // Power supply should be in the range of 7-12V according to the
 // Arduino_UNO_Rev3 tech specs.
 //
 // For calibration you need a known weight load that close to the 
-// maximun range of your load cell.
+// maximum range of your load cell.
 //
-// Board: Arduino UNO Rev3
-// Microcontroller: ATmega328P
+// Board: Arduino UNO Rev3 && Arduino Nano
+// Microcontroller: ATmega328P && ATmega328
 // Clock speed: 16 MHz
 //
 // Contributions & Special thanks:
@@ -35,7 +35,7 @@
 #include "HX711.h"                          // https://github.com/bogde/HX711
 #include "LiquidCrystal_I2C.h"              // https://github.com/johnrickman/LiquidCrystal_I2C
 #include "EEPROM.h"                         // https://github.com/PaulStoffregen/EEPROM
-#include "math.h"
+#include "math.h"                           // https://github.com/avrdudes/avr-libc
 
 // Firmware version
 #define  VERSION              "v0.3"
@@ -53,14 +53,14 @@
 #define  GRAVITY_ACCELERATION    981        // Default gravitational acceleration (9.81)
 
 // Default measurement unit
-#define  DEFAULT_UNIT              3        // 1 for kgf, 2 for gf, 3 for N, 4 for kg, 5 for g
+#define  DEFAULT_UNIT              5        // 1 for kgf, 2 for gf, 3 for N, 4 for kg, 5 for g
 
 // EEPROM identifier
 #define  EEPROM_IDENT         0xE76B        // to identify if EEPROM was written by this program
 
 // Define long press and short press time set (ms)
-#define  LONG_PRESS              200
-#define  SHORT_PRESS               1
+#define  LONG_PRESS             1000
+#define  SHORT_PRESS              10
 
 // Define the refresh time set of the lcd (ms)
 #define REFRESH_TIME             100
@@ -81,19 +81,19 @@ uint8_t  units                     =  DEFAULT_UNIT;
 // float    SetScaleFactor, SetGravityAcc;
 
 // Menu items
-const String MainScreenItems[]      =  { "Measurement", "Setting", "Information", "Advance" };
-const String SureItems[]            =  { "Are you sure ?", "No", "Yes" };
-const String SettingItems[]         =  { "Calibration", "Gravity setting", "Set scale factor" };
-const char* InformationItems[]     =  { "Scale factor", "Gravity acceleration", "Firmware version" };
-const char* StoreItems[]           =  { "Store Settings ?", "No", "Yes" };
-const char* UnitsItems[]           =  { "kgf", "gf", "N", "kg", "g" };
-const char* AdvanceItems[]         =  { "Comming Soon" };
+const String MainScreenItems[]     =  { "Measurement", "Setting", "Information", "Advance" };
+const String SureItems[]           =  { "Are you sure ?", "No", "Yes" };
+const String SettingItems[]        =  { "Calibration", "Gravity setting", "Set scale factor" };
+const String InformationItems[]    =  { "Scale factor", "Gravity acceleration", "Firmware version" };
+const String StoreItems[]          =  { "Store Settings ?", "No", "Yes" };
+const String UnitsItems[]          =  { "kgf", "gf", "N", "kg", "g" };
+const String AdvanceItems[]        =  { "Comming Soon" };
 
-// Create hx711 object
-HX711 hx711;
+    // Create hx711 object
+    HX711 hx711;
 
-// Create lcd object
-LiquidCrystal_I2C lcd(0x27, 16, 2);
+    // Create lcd object
+    LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 void setup() {
     // set the buttons pin modes
@@ -115,41 +115,40 @@ void setup() {
     // get default values from EEPROM
     getEEPROM();
 
-    // // read and set current value
+    // read and set current value
     // SetScaleFactor = scaleFacter;
     // SetGravityAcc = gravityAcceleration;
     // SetUnit = units;
     Measurement();
 }
 
+void loop() {
+    mainMenu();
+}
+
 // reads user settings from EEPROM; if EEPROM values are invalid, write defaults
 void getEEPROM() {
     uint16_t identifier = (EEPROM.read(0) << 8) | EEPROM.read(1);
     if (identifier == EEPROM_IDENT) {
-    scaleFacter           = (EEPROM.read(2) << 8) | EEPROM.read(3);
-    gravityAcceleration   = (EEPROM.read(4) << 8) | EEPROM.read(5);
-    units                 =  EEPROM.read(6);
-  }
-  else {
-    EEPROM.update(0, EEPROM_IDENT >> 8); EEPROM.update(1, EEPROM_IDENT & 0xFF);
-    updateEEPROM();
-  }
+        scaleFacter           = (EEPROM.read(2) << 8) | EEPROM.read(3);
+        gravityAcceleration   = (EEPROM.read(4) << 8) | EEPROM.read(5);
+        units                 = EEPROM.read(6);
+    }
+    else {
+        EEPROM.update(0, EEPROM_IDENT >> 8); EEPROM.update(1, EEPROM_IDENT & 0xFF);
+        updateEEPROM();
+    }
 }
 
 // writes user settings to EEPROM using updade function to minimize write cycles
 void updateEEPROM() {
-  uint16_t SCALE_FACTOR_INSTORE = scaleFacter * 100;
-  uint16_t GRAVITY_ACC_INSTORE = gravityAcceleration * 100;
-  EEPROM.update( 2, SCALE_FACTOR_INSTORE >> 8);
-  EEPROM.update( 3, SCALE_FACTOR_INSTORE & 0xFF);
-  EEPROM.update( 4, GRAVITY_ACC_INSTORE >> 8);
-  EEPROM.update( 5, GRAVITY_ACC_INSTORE & 0xFF);
-  EEPROM.update( 6, units);
-}
-
-
-void loop() {
-    mainMenu();
+    uint16_t SCALE_FACTOR_INSTORE = scaleFacter * 100;
+    uint16_t GRAVITY_ACC_INSTORE = gravityAcceleration * 100;
+    EEPROM.update( 2, SCALE_FACTOR_INSTORE >> 8);
+    EEPROM.update( 3, SCALE_FACTOR_INSTORE & 0xFF);
+    EEPROM.update( 4, GRAVITY_ACC_INSTORE >> 8);
+    EEPROM.update( 5, GRAVITY_ACC_INSTORE & 0xFF);
+    EEPROM.update( 6, units);
 }
 
 void Measurement(){
@@ -182,7 +181,7 @@ uint16_t numberInput(int numberSize){
         while(!buttonCheck(BTN_ENTER_PIN, SHORT_PRESS)){
             currentMillis = millis();
             if(currentMillis - lcdMillis >= REFRESH_TIME){
-                CalibrationScreen(selectedNum, 4);
+                CalibrationScreen(selectedNum, numberSize);
                 lcdMillis = millis();
             }
             if(buttonCheck(BTN_DOWN_PIN, SHORT_PRESS) && (selectedNum[i] != 0)) {
@@ -219,12 +218,17 @@ void Calibration(){
     lcd.print("Put sapmple object..."); 
     delay(REFRESH_TIME);
     uint16_t sample_weight =  numberInput(4);
-    float current_weight = hx711.get_units(10); 
-    float scale_factor = (current_weight/sample_weight);
-    lcd.clear();
-    lcd.print("Scale number:  ");
-    lcd.print(scale_factor,0);  
-    delay(1000);
+    while(1){
+        lcd.clear();
+        lcd.print(sample_weight);
+        delay(1000);
+    }
+    // float current_weight = hx711.get_units(10); 
+    // float scale_factor = (current_weight/sample_weight);
+    // lcd.clear();
+    // lcd.print("Scale number:  ");
+    // lcd.print(scale_factor,0);  
+    // delay(1000);
 }
 
 void Setting(){
