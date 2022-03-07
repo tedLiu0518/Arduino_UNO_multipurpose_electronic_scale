@@ -188,6 +188,8 @@ uint16_t numberInput(int numberSize){
 
 void CalibrationScreen(int selectedNum[], int numberSize){
     lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("Input sample weight (g)..");
     for(int i = 0; i < numberSize; i++){
         lcd.setCursor((15-i),1);
         lcd.print(selectedNum[i]);
@@ -218,7 +220,12 @@ void Calibration(){
     lcd.print("Scale number:");
     lcd.setCursor(0,1);
     lcd.print(scale_factor); 
-    while(!buttonCheck(BTN_ENTER_PIN, LONG_PRESS));
+    delay(10000);
+    storeInput(scale_factor);
+}
+
+void storeInput(float scale_factor){
+    int selectedFunc = selection(SettingItems, 2);
 }
 
 void Setting() {
