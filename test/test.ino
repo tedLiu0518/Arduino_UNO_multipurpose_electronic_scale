@@ -16,17 +16,18 @@
 #define  DEFAULT_SCALE_FACTOR   2080        // Default scale factor of DYLT-101 "S" Type load cell (20.80)
 #define  LONG_PRESS             1000
 #define  SHORT_PRESS              10
-#define REFRESH_RATE             100
+#define  REFRESH_RATE            100
+#define  RELAY_VALUE             500
 
 // Menu items
 const String MainScreenItems[]     =  { "Measure", "Setting", "Information", "Advance" };
 
 // Timing && selection variables
-uint32_t  buttonMillis, currentMillis, lcdMillis;
-uint8_t   selected;
+uint32_t     buttonMillis, currentMillis, lcdMillis;
+uint8_t      selected;
 
 // Default values that can be changed by the user and store in the EEPROM 
-float     scaleFacter              =  (float)DEFAULT_SCALE_FACTOR / 100.00;
+float        scaleFacter           =  (float)DEFAULT_SCALE_FACTOR / 100.00;
 
 // Create lcd && scale object
 LiquidCrystal_I2C lcd(0x27, 16, 2);
@@ -54,7 +55,7 @@ void setup() {
 }
 
 void checkRelay(float value) {
-    if(value >= 1500) {
+    if(value >= RELAY_VALUE) {
         digitalWrite(RELAY_1_PIN, LOW);
         digitalWrite(RELAY_2_PIN, LOW);
     }
@@ -81,7 +82,7 @@ void Measure() {
     scale.tare();
     lcd.clear();
     lcd.setCursor(0,0);
-    lcd.print("measuring..");
+    lcd.print("Measuring..");
     lcdMillis = millis();
     while(!buttonCheck(BTN_ESC_PIN, LONG_PRESS)){
         float value = scale.get_units(10);
