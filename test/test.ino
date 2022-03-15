@@ -85,17 +85,26 @@ void updateEEPROM() {
 }
 
 void checkRelay(float value) {
-    if(!digitalRead(BTN_UP_PIN)) {
+    if(!digitalRead(BTN_DOWN_PIN)) {
+        digitalWrite(RELAY_1_PIN, HIGH);
+        digitalWrite(RELAY_2_PIN, LOW);
+    }
+    else {
         if(value >= RELAY_VALUE) {
-            digitalWrite(RELAY_1_PIN, LOW);
-            digitalWrite(RELAY_2_PIN, LOW);
-        }
-        else {
-            digitalWrite(RELAY_2_PIN, HIGH);
             digitalWrite(RELAY_1_PIN, HIGH);
         }
+        else {
+            if(!digitalRead(BTN_UP_PIN)) {
+                digitalWrite(RELAY_2_PIN, HIGH);
+                digitalWrite(RELAY_1_PIN, LOW);
+            }
+        }
     }
-    if(!digitalRead(BTN_DOWN_PIN)) {
+}
+
+void ResetRelay() {
+    if(!digitalRead(BTN_UP_PIN) || !digitalRead(BTN_DOWN_PIN)) {}
+    else {
         digitalWrite(RELAY_2_PIN, HIGH);
         digitalWrite(RELAY_1_PIN, HIGH);
     }
@@ -112,10 +121,6 @@ void measureScreen(float value) {
     }      
 }
 
-void toggleRelay() {
-    
-}
-
 void Measure() {
     scale.power_up();
     scale.set_scale(scaleFacter);
@@ -129,6 +134,7 @@ void Measure() {
         currentMillis = millis();
         measureScreen(value);
         checkRelay(value);
+        ResetRelay();
     }
     scale.power_down();
     digitalWrite(RELAY_2_PIN, HIGH);
