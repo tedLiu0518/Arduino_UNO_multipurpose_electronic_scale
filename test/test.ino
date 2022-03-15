@@ -18,13 +18,16 @@
 #define  LONG_PRESS             1000
 #define  SHORT_PRESS              10
 #define  REFRESH_RATE            100
-#define  RELAY_VALUE             500
+#define  RELAY_VALUE             100
 
 // EEPROM identifier
 #define  EEPROM_IDENT         0xE76A        // to identify if EEPROM was written by this program
 
 // Menu items
 const String MainScreenItems[]     =  { "Measure", "Setting", "Information", "Advance" };
+const String StoreItems[]           =  { "Store factor?", "Press ENTER" };
+const String PutSampleItems[]       =  {  "Put sample..", "Press ENTER" };
+const String ClearItems[]          =  {  "Clear..", "Press ENTER" };
 
 // Timing && selection variables
 uint32_t     buttonMillis, currentMillis, lcdMillis;
@@ -82,11 +85,17 @@ void updateEEPROM() {
 }
 
 void checkRelay(float value) {
-    if(value >= RELAY_VALUE) {
-        digitalWrite(RELAY_1_PIN, LOW);
-        digitalWrite(RELAY_2_PIN, LOW);
+    if(!digitalRead(BTN_UP_PIN)) {
+        if(value >= RELAY_VALUE) {
+            digitalWrite(RELAY_1_PIN, LOW);
+            digitalWrite(RELAY_2_PIN, LOW);
+        }
+        else {
+            digitalWrite(RELAY_2_PIN, HIGH);
+            digitalWrite(RELAY_1_PIN, HIGH);
+        }
     }
-    else{
+    if(!digitalRead(BTN_DOWN_PIN)) {
         digitalWrite(RELAY_2_PIN, HIGH);
         digitalWrite(RELAY_1_PIN, HIGH);
     }
@@ -101,6 +110,10 @@ void measureScreen(float value) {
         lcd.print("gram(g)");
         lcdMillis = millis();
     }      
+}
+
+void toggleRelay() {
+    
 }
 
 void Measure() {
@@ -122,15 +135,40 @@ void Measure() {
     digitalWrite(RELAY_1_PIN, HIGH);
 }
 
-void CalibrationScreen1() {
+void Screen2Items(String Items[]) {
     if(currentMillis - lcdMillis >= REFRESH_RATE) {
         lcd.clear();
         lcd.setCursor(0,0);
-        lcd.print("Nothing on it...");
+        lcd.print(Items[0]);
         lcd.setCursor(0,1);
-        lcd.print("Press Enter");
+        lcd.print(Items[1]);
         lcdMillis = millis();
     }
+}
+
+uint16_t numberInput(int numberSize){
+    int selectedNum[numberSize] = {0};
+    for(int i = 0; i <= numberSize-1 ; i++){
+        lcdMillis = millis();
+        while(!buttonCheck(BTN_ENTER_PIN, SHORT_PRESS)){
+            currentMillis = millis();
+            if(currentMillis - lcdMillis >= REFRESH_RATE){
+                CalibrationScreen(selectedNum, numberSize);
+                lcdMillis = millis();
+            }
+            if(buttonCheck(BTN_DOWN_PIN, SHORT_PRESS) && (selectedNum[i] != 0)) {
+                selectedNum[i]--;
+            }
+            if(buttonCheck(BTN_UP_PIN, SHORT_PRESS) && (selectedNum[i] != 9)) {
+                selectedNum[i]++;
+            }
+        }
+    }
+    uint16_t numberReturn = 0;
+    for(int i = 0; i<= numberSize-1 ; i++){
+        numberReturn = numberReturn + (selectedNum[i]*pow(10,i));
+    }
+    return numberReturn;
 }
 
 void Calibration() {
@@ -139,7 +177,7 @@ void Calibration() {
     lcdMillis = millis();
     while(1) {
         currentMillis = millis();
-        CalibrationScreen1();
+        Screen2Items(ClearItems);
         if(buttonCheck(BTN_ENTER_PIN, SHORT_PRESS)) {
             break;
         }
@@ -149,6 +187,50 @@ void Calibration() {
     }
     scale.set_scale();
     scale.tare();
+    float sample_weight = (float)numberInput(5)/100.00;
+    lcd.clear();
+    lcdMillis = millis();
+    while(1) {
+        currentMillis = millis();
+        Screen2Items(PutSampleItems);
+        if(buttonCheck(BTN_ENTER_PIN, SHORT_PRESS)) {
+            break;
+        }
+        if(buttonCheck(BTN_ESC_PIN, SHORT_PRESS)) {
+            mainScreen();
+        }
+    }
+    float current_weight = scale.get_units(10);
+    scaleFacter = (current_weight/sample_weight);
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("Scale number:");
+    lcd.setCursor(0,1);
+    lcd.print(scaleFacter); 
+    delay(10000);
+    lcd.clear();
+    lcdMillis = millis();
+    while(1) {
+        currentMillis = millis();
+        Screen2Items(StoreItems);
+        if(buttonCheck(BTN_ENTER_PIN, SHORT_PRESS)) {
+            break;
+        }
+        if(buttonCheck(BTN_ESC_PIN, SHORT_PRESS)) {
+            mainScreen();
+        }
+    }
+    updateEEPROM();
+}
+
+void CalibrationScreen(int selectedNum[], int numberSize) {
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("Input sample(g)..");
+    for(int i = 0; i < numberSize; i++){
+        lcd.setCursor((15-i),1);
+        lcd.print(selectedNum[i]);
+    } 
 }
 
 void mainScreen() {

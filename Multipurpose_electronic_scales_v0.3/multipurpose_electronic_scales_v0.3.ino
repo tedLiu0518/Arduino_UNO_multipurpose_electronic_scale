@@ -34,7 +34,6 @@
 #include "HX711.h"                          // https://github.com/bogde/HX711
 #include "LiquidCrystal_I2C.h"              // https://github.com/johnrickman/LiquidCrystal_I2C
 #include "EEPROM.h"                         // https://github.com/PaulStoffregen/EEPROM
-#include "math.h"                           // https://github.com/avrdudes/avr-libc
 
 // Firmware version
 #define  VERSION              "v0.3"
