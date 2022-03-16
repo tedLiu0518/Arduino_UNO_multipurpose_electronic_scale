@@ -286,7 +286,7 @@ void mainScreen() {
     switch (selectedFunc) {
         case 0:   Measure();           break;
         case 1:   Calibration();       break;
-        // case 2:   Information();    break;
+        // case 2:   Information();    break; //show current scale factor
         default:                       break; //break or exit
     }
 }
