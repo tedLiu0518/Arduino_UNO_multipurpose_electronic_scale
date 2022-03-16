@@ -6,7 +6,7 @@
 // - Calibrating and storing the scale factor into the EEPROM
 // - Automatically enter measure mode after start-up
 // - Setup menu by long-pressing the Esc button
-// - Two Relay pin 
+// - Two Relay pin to control motor or etc
 // 
 // Power supply should be in the range of 7-12V according to the
 // Arduino_UNO_Rev3 tech specs.
@@ -123,6 +123,7 @@ void updateEEPROM() {
     EEPROM.update( 3, SCALE_FACTOR_INSTORE & 0xFF);
 }
 
+// when the load is greater than setted, toggle relay
 void checkRelay(float value) {
     if (!digitalRead(BTN_DOWN_PIN)) {
         digitalWrite(RELAY_1_PIN, HIGH);
@@ -160,6 +161,7 @@ void measureScreen(float value) {
     }      
 }
 
+// in this mode btn up and btn down will control the relay 
 void Measure() {
     scale.power_up();
     scale.set_scale(scaleFacter);
