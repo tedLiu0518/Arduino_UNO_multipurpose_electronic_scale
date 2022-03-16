@@ -6,11 +6,9 @@ Calibrating and store the scale factor into the EEPROM
 
 Automatically enter weighing mode after start-up
 
-Setup menu by long pressing the Enter button
+Setup menu by long pressing the ESC button
 
-Buzzer
-
-Advanced function to control other pins (main purpose of this project)
+2 Pins to control relays
 
 Power supply should be in the range of 7-12V according to the
 Arduino_UNO_Rev3 tech specs.
