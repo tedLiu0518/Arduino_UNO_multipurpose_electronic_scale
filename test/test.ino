@@ -246,7 +246,7 @@ void Calibration() {
         }
     }
     float current_weight = scale.get_units(10);
-    scaleFacter = (current_weight/sample_weight);
+    scaleFacter = (current_weight / sample_weight);
     lcd.clear();
     lcd.setCursor(0,0);
     lcd.print("Scale number:");
