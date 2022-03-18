@@ -7,9 +7,10 @@
 // - Automatically enter measure mode after start-up
 // - Setup menu by long-pressing the Esc button
 // - Two Relay pin to control motor or etc
+// - New SSD1306oled display
 // 
 // Power supply should be in the range of 7-12V according to the
-// Arduino_UNO_Rev3 tech specs.
+// Arduino_UNO_Rev3 && Arduino_Nano tech specs.
 //
 // For calibration you need a known weight load that close to the 
 // maximum range of your load cell.
@@ -32,12 +33,13 @@
 // - https://creativecommons.org/licenses/by-sa/3.0/
 //
 // Libraries
-#include "LiquidCrystal_I2C.h"              // https://github.com/johnrickman/LiquidCrystal_I2C
+#include "Wire.h"                           // https://github.com/esp8266/Arduino/blob/master/libraries/Wire
+#include "U8g2lib.h"                        // https://github.com/olikraus/u8g2
 #include "HX711.h"                          // https://github.com/bogde/HX711
 #include "EEPROM.h"                         // https://github.com/PaulStoffregen/EEPROM
 
 // Firmware version
-#define  VERSION              "v0.4"
+#define  VERSION              "v0.5"
 
 // Pins
 #define  HX711_DT_PIN              2        // HX711 module Data IO Connection
@@ -51,29 +53,30 @@
 
 // Default values                   
 #define  DEFAULT_SCALE_FACTOR   2080        // Default scale factor of DYLT-101 "S" Type load cell (20.80)
-#define  LONG_PRESS             1000
-#define  SHORT_PRESS              10
-#define  REFRESH_RATE            100
-#define  RELAY_VALUE             100
+#define  LONG_PRESS             1000        // Default time for long press (millisecond)
+#define  SHORT_PRESS              10        // Default time for short press (millisecond)
+#define  REFRESH_RATE            100        // Refresh time for display (millisecond)
+#define  RELAY_VALUE             100        // Default value for toggle Relays (gram)
 
 // EEPROM identifier
 #define  EEPROM_IDENT         0xE76A        // to identify if EEPROM was written by this program
 
 // Menu items
-const String MainScreenItems[]     =  { "Measure", "Setting", "Information" };
-const String StoreItems[]          =  { "Store factor?", "Press ENTER" };
-const String PutSampleItems[]      =  { "Put sample..", "Press ENTER" };
-const String ClearItems[]          =  { "Clear..", "Press ENTER" };
+const String MainScreenItems[]           =  { "Measure", "Setting", "Information" };
+const String StoreScreenItems[]          =  { "Store factor?", "Press ENTER" };
+const String PutSampleScreenItems[]      =  { "Calibrate", "Put Sample", "Press ENTER" };
+const String ClearLoadScreenItems[]      =  { "Calibrate", "Clear Load", "Press ENTER" };
+const String TareItems[]                 =  { "Measure", "Tare?", "Press ENTER" };
 
 // Timing && selection variables
-uint32_t     buttonMillis, currentMillis, lcdMillis;
+uint32_t     buttonMillis, currentMillis, displayMillis;
 uint8_t      selected;
 
 // Default values that can be changed by the user and store in the EEPROM 
 float        scaleFacter           =  (float)DEFAULT_SCALE_FACTOR / 100.00;
 
-// Create lcd && scale object
-LiquidCrystal_I2C lcd(0x27, 16, 2);
+// Create u8g2 && scale object
+U8G2_SSD1306_128X64_NONAME_2_SW_I2C u8g2(U8G2_R0, /* clock=*/ SCL, /* data=*/ SDA, /* reset=*/ U8X8_PIN_NONE);
 HX711 scale;
 
 void setup() {
@@ -89,10 +92,9 @@ void setup() {
     digitalWrite(RELAY_1_PIN, HIGH);
     digitalWrite(RELAY_2_PIN, HIGH);
 
-    // initialize the lcd && scale
-    lcd.init();     
-    lcd.backlight();  
-    lcd.print("LCD is running..");
+    // initialize the display && scale
+    u8g2.begin();
+    u8g2.setFont(u8g2_font_ncenB14_tr);
     scale.begin(HX711_DT_PIN, HX711_SCK_PIN);
     scale.power_down();	
 
@@ -124,7 +126,7 @@ void updateEEPROM() {
 }
 
 // when the load is greater than setted, toggle relay
-void checkRelay(float value) {
+void checkRelay(uint16_t value) {
     if (!digitalRead(BTN_DOWN_PIN)) {
         digitalWrite(RELAY_1_PIN, HIGH);
         digitalWrite(RELAY_2_PIN, LOW);
@@ -150,14 +152,21 @@ void ResetRelay() {
     }
 }
 
-void measureScreen(float value) {
-    if (currentMillis - lcdMillis >= REFRESH_RATE) {
-        lcd.clear();
-        lcd.setCursor(0,0);
-        lcd.print(value);
-        lcd.setCursor(0,1);
-        lcd.print("gram(g)");
-        lcdMillis = millis();
+void measureScreen(uint16_t value) {
+    if (currentMillis - displayMillis >= REFRESH_RATE) {
+        u8g2.firstPage();
+        do {
+            u8g2.setFont(u8g2_font_ncenB10_tr);
+            u8g2.setCursor(0, 15);
+            u8g2.print("Measure");
+            u8g2.setFont(u8g2_font_ncenB18_tr);
+            u8g2.setCursor(0, 40);
+            u8g2.print(value);
+            u8g2.setFont(u8g2_font_ncenB12_tr);
+            u8g2.setCursor(0, 58);
+            u8g2.print("gram(g)");
+        } while(u8g2.nextPage());
+        displayMillis = millis();
     }      
 }
 
@@ -165,13 +174,20 @@ void measureScreen(float value) {
 void Measure() {
     scale.power_up();
     scale.set_scale(scaleFacter);
-    scale.tare();
-    lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.print("Measuring..");
-    lcdMillis = millis();
+    while (1) {
+        currentMillis = millis();
+        ConfirmScreen(TareItems);
+        if (buttonCheck(BTN_ENTER_PIN, SHORT_PRESS)) {
+            scale.tare();
+            break;
+        }
+        if (buttonCheck(BTN_ESC_PIN, SHORT_PRESS)) {
+            break;
+        }
+    }
+    displayMillis = millis();
     while (!buttonCheck(BTN_ESC_PIN, LONG_PRESS)) {
-        float value = scale.get_units(10);
+        uint16_t value = scale.get_units(10);
         currentMillis = millis();
         measureScreen(value);
         checkRelay(value);
@@ -182,26 +198,34 @@ void Measure() {
     digitalWrite(RELAY_1_PIN, HIGH);
 }
 
-void Screen2Items(String Items[]) {
-    if (currentMillis - lcdMillis >= REFRESH_RATE) {
-        lcd.clear();
-        lcd.setCursor(0,0);
-        lcd.print(Items[0]);
-        lcd.setCursor(0,1);
-        lcd.print(Items[1]);
-        lcdMillis = millis();
+// only accept 3 items, first is current task, second is confirm content, third is action
+void ConfirmScreen(String Items[]) {
+    if (currentMillis - displayMillis >= REFRESH_RATE) {
+        u8g2.firstPage();
+        do {
+            u8g2.setFont(u8g2_font_ncenB10_tr);
+            u8g2.setCursor(0, 15);
+            u8g2.print(Items[0]);
+            u8g2.setFont(u8g2_font_ncenB18_tr);
+            u8g2.setCursor(0, 40);
+            u8g2.print(Items[1]);		
+            u8g2.setFont(u8g2_font_ncenB12_tr);
+            u8g2.setCursor(0, 58);
+            u8g2.print(Items[2]);
+        } while ( u8g2.nextPage() );
+        displayMillis = millis();
     }
 }
 
 uint16_t numberInput(int numberSize){
     int selectedNum[numberSize] = {0};
     for (int i = 0; i <= numberSize-1 ; i++) {
-        lcdMillis = millis();
+        displayMillis = millis();
         while (!buttonCheck(BTN_ENTER_PIN, SHORT_PRESS)) {
             currentMillis = millis();
-            if (currentMillis - lcdMillis >= REFRESH_RATE) {
+            if (currentMillis - displayMillis >= REFRESH_RATE) {
                 CalibrationScreen(selectedNum, numberSize);
-                lcdMillis = millis();
+                displayMillis = millis();
             }
             if (buttonCheck(BTN_DOWN_PIN, SHORT_PRESS) && (selectedNum[i] != 0)) {
                 selectedNum[i]--;
@@ -220,11 +244,10 @@ uint16_t numberInput(int numberSize){
 
 void Calibration() {
     scale.power_up();
-    lcd.clear();
-    lcdMillis = millis();
+    displayMillis = millis();
     while (1) {
         currentMillis = millis();
-        Screen2Items(ClearItems);
+        ConfirmScreen(ClearLoadScreenItems);
         if (buttonCheck(BTN_ENTER_PIN, SHORT_PRESS)) {
             break;
         }
@@ -235,11 +258,10 @@ void Calibration() {
     scale.set_scale();
     scale.tare();
     float sample_weight = (float)numberInput(5)/100.00;
-    lcd.clear();
-    lcdMillis = millis();
+    displayMillis = millis();
     while (1) {
         currentMillis = millis();
-        Screen2Items(PutSampleItems);
+        ConfirmScreen(PutSampleScreenItems);
         if (buttonCheck(BTN_ENTER_PIN, SHORT_PRESS)) {
             break;
         }
@@ -249,36 +271,54 @@ void Calibration() {
     }
     float current_weight = scale.get_units(10);
     scaleFacter = (current_weight / sample_weight);
-    lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.print("Scale number:");
-    lcd.setCursor(0,1);
-    lcd.print(scaleFacter); 
-    delay(10000);
-    lcd.clear();
-    lcdMillis = millis();
+    displayMillis = millis();
     while (1) {
         currentMillis = millis();
-        Screen2Items(StoreItems);
+        confirmScale();
         if (buttonCheck(BTN_ENTER_PIN, SHORT_PRESS)) {
+            updateEEPROM();
             break;
         }
         if (buttonCheck(BTN_ESC_PIN, SHORT_PRESS)) {
             mainScreen();
         }
     }
-    updateEEPROM();
     getEEPROM();
 }
 
+void confirmScale() {
+    if (currentMillis - displayMillis >= REFRESH_RATE) {
+        u8g2.firstPage();
+        do {
+            u8g2.setFont(u8g2_font_ncenB10_tr);
+            u8g2.setCursor(0, 15);
+            u8g2.print("scale factor");
+            u8g2.setFont(u8g2_font_ncenB18_tr);
+            u8g2.setCursor(0, 40);
+            u8g2.print(scaleFacter);		
+            u8g2.setFont(u8g2_font_ncenB12_tr);
+            u8g2.setCursor(0, 58);
+            u8g2.print("save : Press ENTER");
+        } while ( u8g2.nextPage() );
+        displayMillis = millis();
+    }
+}
+
 void CalibrationScreen(int selectedNum[], int numberSize) {
-    lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.print("Input sample(g)..");
-    for (int i = 0; i < numberSize; i++) {
-        lcd.setCursor((15-i),1);
-        lcd.print(selectedNum[i]);
-    } 
+    u8g2.firstPage();
+    do {
+        u8g2.setFont(u8g2_font_ncenB10_tr);
+        u8g2.setCursor(0, 15);
+        u8g2.print("Input sample(g)");
+        for (int i = 0; i < numberSize; i++) {
+            u8g2.setFont(u8g2_font_ncenB18_tr);
+            u8g2.setCursor((100-i*10),40);
+            u8g2.print(selectedNum[i]);
+        } 
+        u8g2.setFont(u8g2_font_ncenB12_tr);
+        u8g2.setCursor(0, 58);
+        u8g2.print("next : Press ENTER");
+    } while ( u8g2.nextPage() );
 }
 
 void mainScreen() {
@@ -293,18 +333,15 @@ void mainScreen() {
 
 int selection(String Items[], uint8_t numberOfItems) {
     selected = 0;
-    lcdMillis = millis();
+    updateScreen(Items, numberOfItems, selected);
     while(1) {
-        currentMillis = millis();
-        if(currentMillis - lcdMillis >= 100) {
-            updateScreen(Items, numberOfItems, selected);
-            lcdMillis = millis();
-        }
         if(buttonCheck(BTN_UP_PIN, SHORT_PRESS) && (selected != 0)) {
             selected --;
+            updateScreen(Items, numberOfItems, selected);
         }
         if(buttonCheck(BTN_DOWN_PIN, SHORT_PRESS) && (selected != (numberOfItems - 1))) {
             selected ++;
+            updateScreen(Items, numberOfItems, selected);
         }
         if(buttonCheck(BTN_ENTER_PIN, SHORT_PRESS)) {
             return selected;
@@ -328,13 +365,17 @@ bool buttonCheck(int buttonPin, uint32_t timeSetted) {
 }
 
 void updateScreen(String Items[], uint8_t numberOfItems, uint8_t selected) {
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print(">" + Items[selected]);
-    if(selected <= (numberOfItems-2)) {
-        lcd.setCursor(0, 1);
-        lcd.print(Items[selected+1]);
-    }
+    u8g2.firstPage();
+    do {
+        u8g2.setFont(u8g2_font_ncenB12_tr);
+        u8g2.setCursor(0, 15);
+        u8g2.print(">" + Items[selected]);
+        if(selected <= (numberOfItems-2)) {
+            u8g2.setFont(u8g2_font_ncenB12_tr);
+            u8g2.setCursor(0, 40);
+            u8g2.print(Items[selected+1]);
+        }
+    } while ( u8g2.nextPage() );
 }
 
 void loop() {
