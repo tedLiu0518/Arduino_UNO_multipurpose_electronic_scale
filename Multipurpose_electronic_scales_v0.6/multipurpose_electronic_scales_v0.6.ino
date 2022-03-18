@@ -39,7 +39,7 @@
 #include "EEPROM.h"                         // https://github.com/PaulStoffregen/EEPROM
 
 // Firmware version
-#define  VERSION              "v0.5"
+#define  VERSION              "v0.6"
 
 // Pins
 #define  HX711_DT_PIN              2        // HX711 module Data IO Connection
