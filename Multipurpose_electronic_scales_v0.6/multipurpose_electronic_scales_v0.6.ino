@@ -62,11 +62,10 @@
 #define  EEPROM_IDENT         0xE76A        // to identify if EEPROM was written by this program
 
 // Menu items
-const String MainScreenItems[]           =  { "Measure", "Setting", "Information" };
-const String StoreScreenItems[]          =  { "Store factor?", "Press ENTER" };
+const String MainScreenItems[]           =  { "Measure", "Calibrate", "Information" };
 const String PutSampleScreenItems[]      =  { "Calibrate", "Put Sample", "Press ENTER" };
 const String ClearLoadScreenItems[]      =  { "Calibrate", "Clear Load", "Press ENTER" };
-const String TareItems[]                 =  { "Measure", "Tare?", "Press ENTER" };
+const String TareItems[]                 =  { "Measure", "Tare: ENTER", "" };
 
 // Timing && selection variables
 uint32_t     buttonMillis, currentMillis, displayMillis;
@@ -153,30 +152,26 @@ void ResetRelay() {
 }
 
 void measureScreen(uint16_t value) {
-    if (currentMillis - displayMillis >= REFRESH_RATE) {
         u8g2.firstPage();
         do {
-            u8g2.setFont(u8g2_font_ncenB10_tr);
+            u8g2.setFont(u8g2_font_ncenB12_tr);
             u8g2.setCursor(0, 15);
             u8g2.print("Measure");
             u8g2.setFont(u8g2_font_ncenB18_tr);
-            u8g2.setCursor(0, 40);
+            u8g2.setCursor(0, 41);
             u8g2.print(value);
             u8g2.setFont(u8g2_font_ncenB12_tr);
             u8g2.setCursor(0, 58);
             u8g2.print("gram(g)");
-        } while(u8g2.nextPage());
-        displayMillis = millis();
-    }      
+        } while(u8g2.nextPage());     
 }
 
 // in this mode btn up and btn down will control the relay 
 void Measure() {
     scale.power_up();
     scale.set_scale(scaleFacter);
+    ConfirmScreen(TareItems);
     while (1) {
-        currentMillis = millis();
-        ConfirmScreen(TareItems);
         if (buttonCheck(BTN_ENTER_PIN, SHORT_PRESS)) {
             scale.tare();
             break;
@@ -185,10 +180,8 @@ void Measure() {
             break;
         }
     }
-    displayMillis = millis();
     while (!buttonCheck(BTN_ESC_PIN, LONG_PRESS)) {
         uint16_t value = scale.get_units(10);
-        currentMillis = millis();
         measureScreen(value);
         checkRelay(value);
         ResetRelay();
@@ -200,38 +193,33 @@ void Measure() {
 
 // only accept 3 items, first is current task, second is confirm content, third is action
 void ConfirmScreen(String Items[]) {
-    if (currentMillis - displayMillis >= REFRESH_RATE) {
         u8g2.firstPage();
         do {
-            u8g2.setFont(u8g2_font_ncenB10_tr);
+            u8g2.setFont(u8g2_font_ncenB12_tr);
             u8g2.setCursor(0, 15);
             u8g2.print(Items[0]);
-            u8g2.setFont(u8g2_font_ncenB18_tr);
-            u8g2.setCursor(0, 40);
+            u8g2.setFont(u8g2_font_ncenB12_tr);
+            u8g2.setCursor(0, 32);
             u8g2.print(Items[1]);		
             u8g2.setFont(u8g2_font_ncenB12_tr);
-            u8g2.setCursor(0, 58);
+            u8g2.setCursor(0, 50);
             u8g2.print(Items[2]);
         } while ( u8g2.nextPage() );
-        displayMillis = millis();
-    }
 }
 
 uint16_t numberInput(int numberSize){
     int selectedNum[numberSize] = {0};
     for (int i = 0; i <= numberSize-1 ; i++) {
-        displayMillis = millis();
+        CalibrationScreen(selectedNum, numberSize);
         while (!buttonCheck(BTN_ENTER_PIN, SHORT_PRESS)) {
-            currentMillis = millis();
-            if (currentMillis - displayMillis >= REFRESH_RATE) {
-                CalibrationScreen(selectedNum, numberSize);
-                displayMillis = millis();
-            }
+               
             if (buttonCheck(BTN_DOWN_PIN, SHORT_PRESS) && (selectedNum[i] != 0)) {
                 selectedNum[i]--;
+                 CalibrationScreen(selectedNum, numberSize);
             }
             if (buttonCheck(BTN_UP_PIN, SHORT_PRESS) && (selectedNum[i] != 9)) {
                 selectedNum[i]++;
+                 CalibrationScreen(selectedNum, numberSize);
             }
         }
     }
@@ -244,10 +232,8 @@ uint16_t numberInput(int numberSize){
 
 void Calibration() {
     scale.power_up();
-    displayMillis = millis();
+  ConfirmScreen(ClearLoadScreenItems);
     while (1) {
-        currentMillis = millis();
-        ConfirmScreen(ClearLoadScreenItems);
         if (buttonCheck(BTN_ENTER_PIN, SHORT_PRESS)) {
             break;
         }
@@ -258,10 +244,8 @@ void Calibration() {
     scale.set_scale();
     scale.tare();
     float sample_weight = (float)numberInput(5)/100.00;
-    displayMillis = millis();
+  ConfirmScreen(PutSampleScreenItems);
     while (1) {
-        currentMillis = millis();
-        ConfirmScreen(PutSampleScreenItems);
         if (buttonCheck(BTN_ENTER_PIN, SHORT_PRESS)) {
             break;
         }
@@ -271,10 +255,8 @@ void Calibration() {
     }
     float current_weight = scale.get_units(10);
     scaleFacter = (current_weight / sample_weight);
-    displayMillis = millis();
+            confirmScale();
     while (1) {
-        currentMillis = millis();
-        confirmScale();
         if (buttonCheck(BTN_ENTER_PIN, SHORT_PRESS)) {
             updateEEPROM();
             break;
@@ -287,37 +269,34 @@ void Calibration() {
 }
 
 void confirmScale() {
-    if (currentMillis - displayMillis >= REFRESH_RATE) {
         u8g2.firstPage();
         do {
-            u8g2.setFont(u8g2_font_ncenB10_tr);
+            u8g2.setFont(u8g2_font_ncenB12_tr);
             u8g2.setCursor(0, 15);
-            u8g2.print("scale factor");
-            u8g2.setFont(u8g2_font_ncenB18_tr);
+            u8g2.print("Scale factor:");
+            u8g2.setFont(u8g2_font_ncenB14_tr);
             u8g2.setCursor(0, 40);
             u8g2.print(scaleFacter);		
             u8g2.setFont(u8g2_font_ncenB12_tr);
             u8g2.setCursor(0, 58);
-            u8g2.print("save : Press ENTER");
+            u8g2.print("Save: ENTER");
         } while ( u8g2.nextPage() );
-        displayMillis = millis();
-    }
 }
 
 void CalibrationScreen(int selectedNum[], int numberSize) {
     u8g2.firstPage();
     do {
-        u8g2.setFont(u8g2_font_ncenB10_tr);
+        u8g2.setFont(u8g2_font_ncenB12_tr);
         u8g2.setCursor(0, 15);
-        u8g2.print("Input sample(g)");
+        u8g2.print("Sample(g):");
         for (int i = 0; i < numberSize; i++) {
-            u8g2.setFont(u8g2_font_ncenB18_tr);
+            u8g2.setFont(u8g2_font_ncenB14_tr);
             u8g2.setCursor((100-i*10),40);
             u8g2.print(selectedNum[i]);
         } 
         u8g2.setFont(u8g2_font_ncenB12_tr);
         u8g2.setCursor(0, 58);
-        u8g2.print("next : Press ENTER");
+        u8g2.print("Next: ENTER");
     } while ( u8g2.nextPage() );
 }
 
