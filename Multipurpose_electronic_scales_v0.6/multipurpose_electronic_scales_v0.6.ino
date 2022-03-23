@@ -181,7 +181,7 @@ void Measure() {
         }
     }
     while (!buttonCheck(BTN_ESC_PIN, LONG_PRESS)) {
-        uint16_t value = scale.get_units(10);
+        uint16_t value = scale.get_units(1);
         measureScreen(value);
         checkRelay(value);
         ResetRelay();
