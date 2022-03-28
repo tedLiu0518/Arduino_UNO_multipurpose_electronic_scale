@@ -56,7 +56,7 @@
 #define  LONG_PRESS             1000        // Default time for long press (millisecond)
 #define  SHORT_PRESS              10        // Default time for short press (millisecond)
 #define  REFRESH_RATE            100        // Refresh time for display (millisecond)
-#define  RELAY_VALUE             100        // Default value for toggle Relays (gram)
+#define  RELAY_VALUE            5000        // Default value for toggle Relays (gram)
 
 // EEPROM identifier
 #define  EEPROM_IDENT         0xE76A        // to identify if EEPROM was written by this program
@@ -125,7 +125,7 @@ void updateEEPROM() {
 }
 
 // when the load is greater than setted, toggle relay
-void checkRelay(uint16_t value) {
+void checkRelay(float value) {
     if (!digitalRead(BTN_DOWN_PIN)) {
         digitalWrite(RELAY_1_PIN, HIGH);
         digitalWrite(RELAY_2_PIN, LOW);
@@ -151,7 +151,7 @@ void ResetRelay() {
     }
 }
 
-void measureScreen(uint16_t value) {
+void measureScreen(float value) {
         u8g2.firstPage();
         do {
             u8g2.setFont(u8g2_font_ncenB12_tr);
@@ -181,7 +181,7 @@ void Measure() {
         }
     }
     while (!buttonCheck(BTN_ESC_PIN, LONG_PRESS)) {
-        uint16_t value = scale.get_units(1);
+        float value = scale.get_units(1);
         measureScreen(value);
         checkRelay(value);
         ResetRelay();
@@ -243,7 +243,7 @@ void Calibration() {
     }
     scale.set_scale();
     scale.tare();
-    float sample_weight = (float)numberInput(5)/100.00;
+    float sample_weight = (float)numberInput(5);
   ConfirmScreen(PutSampleScreenItems);
     while (1) {
         if (buttonCheck(BTN_ENTER_PIN, SHORT_PRESS)) {
@@ -265,7 +265,7 @@ void Calibration() {
             mainScreen();
         }
     }
-    getEEPROM();
+     getEEPROM();
 }
 
 void confirmScale() {
